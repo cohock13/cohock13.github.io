@@ -3,10 +3,10 @@ var rightBuffer;
 
 function setup() {
     // 800 x 400 (double width to make room for each "sub-canvas")
-    createCanvas(900, 500);
+    createCanvas(windowWidth, windowHeight);
     // Create both of your off-screen graphics buffers
-    leftBuffer = createGraphics(400, 400);
-    rightBuffer = createGraphics(400, 400);
+    leftBuffer = createGraphics(windowWidth/2, windowHeight/2);
+    rightBuffer = createGraphics(windowWidth/2, windowHeight/2);
 }
 
 function draw() {
