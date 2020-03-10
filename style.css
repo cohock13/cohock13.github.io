@@ -18,4 +18,20 @@ iframe {
     border: none;
     height: 100%;
 	width: 100%;
-	}
+    }
+    
+
+.split-box{
+	position:absolute;
+	width:20%;
+	height:100%;
+}
+ 
+.left-box {
+	left:0;
+}
+ 
+.right-box {
+	right:0;
+	overflow-y:scroll;
+}
