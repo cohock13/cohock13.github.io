@@ -23,15 +23,17 @@ iframe {
 
 .split-box{
 	position:absolute;
-	width:20%;
+	width:80%;
 	height:100%;
 }
  
 .left-box {
-	left:0;
+    left:0;
+    background-color: orange;
 }
  
 .right-box {
 	right:0;
-	overflow-y:scroll;
+    overflow-y:scroll;
+    background-color: palegreen;
 }
