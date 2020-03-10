@@ -1,26 +1,6 @@
-#left {
-	position: absolute;
-	top: 0;
-	left: 0px;
-	width: 220px;
-	height: 100%;
-	text-align: center;
-	}
-#right {
-	position: absolute;
-	top: 0;
-	right: 0;
-	left: 220px;
-	height: 100%;
-	border-left: 2px solid #ccc;
-	}
-iframe {
-    border: none;
-    height: 100%;
-	width: 100%;
-    }
-    
-
+body {
+    margin: 0;
+}
 .split-box{
 	position:absolute;
 	width:80%;
@@ -36,4 +16,13 @@ iframe {
 	right:0;
     overflow-y:scroll;
     background-color: palegreen;
+}
+
+
+@media screen and (max-width:600px) { 
+	.split-box {
+		width:100%;
+		height:auto;
+ 
+	}
 }
