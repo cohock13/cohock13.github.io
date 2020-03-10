@@ -4,7 +4,10 @@ var s = function( p ) { // p could be any variable name
     var x = 100; 
     var y = 100;
     p.setup = function() {
-      p.createCanvas(window.innerWidth/2*0.5,window.innerHeight*0.4);
+      p.createCanvas(window.innerWidth/2*0.77,window.innerHeight*0.8);
+    };
+    p.windowResized = function() {
+      p.resizeCanvas(window.innerWidth/2*0.77,window.innerHeight*0.8);
     };
   
     p.draw = function() {
@@ -21,7 +24,10 @@ var s = function( p ) { // p could be any variable name
     var y = 100; 
     var speed = 2.5; 
     p.setup = function() {
-      p.createCanvas(window.innerWidth/2*0.5,window.innerHeight*0.4);
+      p.createCanvas(window.innerWidth/2*0.77,window.innerHeight*0.8);
+    };
+    p.windowResized = function() {
+      p.resizeCanvas(window.innerWidth/2*0.77,window.innerHeight*0.8);
     };
   
     p.draw = function() {
@@ -44,6 +50,9 @@ var s = function( p ) { // p could be any variable name
         var speed = 2.5; 
         p.setup = function() {
           p.createCanvas(window.innerWidth/2*0.5,window.innerHeight*0.4);
+        };
+        p.windowResized = function() {
+            resizeCanvas(window.innerWidth/2*0.77,window.innerHeight*0.8);
         };
       
         p.draw = function() {

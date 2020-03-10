@@ -9,13 +9,21 @@ body {
  
 .left-box {
     left:0;
-    background-color: orange;
+    background-color: darkred;
+    filter: drop-shadow(10px 10px 10px rgba(0,0,0,0.6));
 }
  
 .right-box {
 	right:0;
     overflow-y:scroll;
-    background-color: palegreen;
+    background-color: gainsboro;
+}
+
+#c1 {
+    margin-left: 5px;
+}
+#c2 {
+    margin-left: 5px;
 }
 
 
