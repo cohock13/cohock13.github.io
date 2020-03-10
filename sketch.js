@@ -4,7 +4,7 @@ var s = function( p ) { // p could be any variable name
     var x = 100; 
     var y = 100;
     p.setup = function() {
-      p.createCanvas(window.innerWidth/2*0.95,window.innerHeight);
+      p.createCanvas(window.innerWidth/2*0.95,window.innerHeight*0.95);
     };
   
     p.draw = function() {
@@ -21,7 +21,7 @@ var s = function( p ) { // p could be any variable name
     var y = 100; 
     var speed = 2.5; 
     p.setup = function() {
-      p.createCanvas(window.innerWidth/2*0.95,window.innerHeight);
+      p.createCanvas(window.innerWidth/2*0.95,window.innerHeight*0.95);
     };
   
     p.draw = function() {
