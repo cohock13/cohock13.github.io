@@ -1,7 +1,3 @@
-let numParticles = 100;
-
-let particlePos = [];
-let particleVel = [];
 
 function setup() {
 	createCanvas(windowWidth,windowHeight);
