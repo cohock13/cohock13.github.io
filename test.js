@@ -15,6 +15,12 @@ function windowResized() {
   }
 function draw() {
 	background(0);
+	textSize(30);
+	strokeWeight(2);
+	textFont("Comic Sans MS");
+	fill(255);
+	noStroke();
+	text("あいうえお亜伊宇.",windowWidth*0.03,windowHeight*0.08);
 	for (let i = 0; i < numParticles; i++) {
 		for (let j = 0; j < numParticles; j++) {
 			if (j != i) particleVel[i].add(attract(j, particlePos[i].x, particlePos[i].y));
