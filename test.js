@@ -10,7 +10,9 @@ function setup() {
 	strokeWeight(3);
 	colorMode(HSB);
 }
-
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+  }
 function draw() {
 	background(0);
 	for (let i = 0; i < numParticles; i++) {
