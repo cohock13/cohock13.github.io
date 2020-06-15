@@ -4,7 +4,7 @@ let particlePos = [];
 let particleVel = [];
 
 function setup() {
-	createCanvas(windowWidth*0.95, windowHeight*0.95);
+	createCanvas(windowWidth,windowHeight);
 
 	reset();
 	strokeWeight(3);
