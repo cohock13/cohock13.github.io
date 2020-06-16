@@ -11,7 +11,7 @@ function parameters() {
 	this.k_m = 0.9;
 	this.k_a = 0.5;
 	this.reset = function() {
-		reset();
+		init();
 	}
 }
 
