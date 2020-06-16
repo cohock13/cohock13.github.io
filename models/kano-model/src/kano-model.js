@@ -60,7 +60,7 @@ function draw() {
 		}
 		position[i].add(position[i]);
 		stroke(255,255,255);
-		line(position[i].x,position[i].y,position[x]-velocity[i].x,position[i].y-velocity[i].y);
+		line(position[i].x,position[i].y,position[i].x-velocity[i].x,position[i].y-velocity[i].y);
 	}
 }
 
