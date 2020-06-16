@@ -11,7 +11,7 @@ function parameters() {
 	this.k_m = 0.9;
 	this.k_a = 0.5;
 	this.reset = function() {
-		init();
+		reset();
 	}
 }
 
@@ -59,6 +59,7 @@ function draw() {
 			}
 		}
 		position[i].add(position[i]);
+		stroke(255,255,255);
 		line(position[i].x,position[i].y,position[x]-velocity[i].x,position[i].y-velocity[i].y);
 	}
 }
