@@ -11,6 +11,7 @@ function parameters() {
 	this.k_p = 0.5;
 	this.k_m = 0.9;
 	this.k_a = 0.5;
+	this.open_boundary = false;
 	this.reset = function() {
 		this.agent_num = this.num;
 		init();
@@ -29,6 +30,7 @@ function setup() {
 	gui.add(param,"k_p",-5,5).step(0.1);
 	gui.add(param,"k_m",-5,5).step(0.1);
 	gui.add(param,"k_a",-5,5).step(0.1);
+	gui.add(param,"open_boundary");
 	gui.add(param,"reset");
 }
 
@@ -61,8 +63,12 @@ function draw() {
 			}
 		}
 		position[i].add(velocity[i]);
+		if(param.open_boundary == false){
+			position[i].x = constrain(position[i].x,0,windowWidth);
+			position[i].y = constrain(position[i].y,0,windowHeight);
+		}
 		stroke(255);
-		line(position[i].x,position[i].y,position[i].x-velocity[i].x,position[i].y-velocity[i].y);
+		line(position[i].x,position[i].y,position[i].x,position[i].y);
 	}
 }
 
