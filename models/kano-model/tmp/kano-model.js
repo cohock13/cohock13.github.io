@@ -24,12 +24,12 @@ function setup() {
 	background(0);
 	init();
 	strokeWeight(5);
-	colorMode(HSB);
+	colorMode(RGB);
 	let gui = new dat.GUI();
 	gui.add(param,"num",2,30).step(1);
-	gui.add(param,"k_p",-5,5).step(0.1);
-	gui.add(param,"k_m",-5,5).step(0.1);
-	gui.add(param,"k_a",-5,5).step(0.1);
+	gui.add(param,"k_p",-5,5).step(0.01);
+	gui.add(param,"k_m",-5,5).step(0.01);
+	gui.add(param,"k_a",-5,5).step(0.01);
 	gui.add(param,"open_boundary");
 	gui.add(param,"reset");
 }
@@ -46,7 +46,7 @@ function draw() {
 	textFont("Comic Sans MS");
 	fill(255);
 	noStroke();
-	text("加納モデル",windowWidth*0.03,windowHeight*0.08);
+	text("遊び心で作った秩序形成の数理モデル(2018)",windowWidth*0.03,windowHeight*0.08);
 
 	for(let i = 0;i<param.agent_num;++i){
 		for(let j = 0;j<param.agent_num;++j){
@@ -67,7 +67,12 @@ function draw() {
 			position[i].x = constrain(position[i].x,0,windowWidth);
 			position[i].y = constrain(position[i].y,0,windowHeight);
 		}
-		stroke(255);
+		if(i == 0){
+			stroke(255,0,0);
+		}
+		else{
+			stroke(255);
+		}
 		line(position[i].x,position[i].y,position[i].x,position[i].y);
 	}
 }
