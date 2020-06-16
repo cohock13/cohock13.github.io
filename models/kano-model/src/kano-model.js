@@ -14,5 +14,5 @@ function draw() {
 	textFont("Comic Sans MS");
 	fill(255);
 	noStroke();
-	text("あいうえお亜伊宇.",windowWidth*0.03,windowHeight*0.08);
+	text("加納モデル",windowWidth*0.03,windowHeight*0.08);
 }
