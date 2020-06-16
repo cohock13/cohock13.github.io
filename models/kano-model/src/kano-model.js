@@ -67,7 +67,7 @@ function init() {
 	background(0);
 	for(let i = 0;i<param.agent_num;++i){
 		position[i] = createVector(random(width),random(height));
-		vetcor[i] = createVector(0,0);
+		velocity[i] = createVector(0,0);
 	}
 }
 
@@ -76,10 +76,11 @@ function attract_vetcor(i,j,n) {
 	let e = createVector(position[j].x-position[i].x,position[j].y-position[i].y);
 	e.normalize();
 	if(n == 0){
-		return e.mult((param.k_p+param.k_m)/distance-1/(distance*distance));
+		e.mult((param.k_p+param.k_m)/distance-1/(distance*distance))
 	}else if(n == 1){
-		return e.mult((param.k_p-param.k_m)/distance-1/(distance*distance));
+		e.mult((param.k_p-param.k_m)/distance-1/(distance*distance));
 	}else{
-		return e.mult((param.k_a)/distance-1/(distance*distance));
+		e.mult((param.k_a)/distance-1/(distance*distance));
 	}
+	return e;
 }
