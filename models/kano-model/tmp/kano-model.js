@@ -83,3 +83,4 @@ function attract_vetcor(i,j,n) {
 		return e.mult((param.k_a)/distance-1/(distance*distance));
 	}
 }
+
