@@ -27,9 +27,9 @@ function setup() {
 	colorMode(RGB);
 	let gui = new dat.GUI();
 	gui.add(param,"num",2,30).step(1);
-	gui.add(param,"k_p",-5,5).step(0.01);
-	gui.add(param,"k_m",-5,5).step(0.01);
-	gui.add(param,"k_a",-5,5).step(0.01);
+	gui.add(param,"k_p",-5,5).step(0.1);
+	gui.add(param,"k_m",-5,5).step(0.1);
+	gui.add(param,"k_a",-5,5).step(0.1);
 	gui.add(param,"open_boundary");
 	gui.add(param,"reset");
 }
