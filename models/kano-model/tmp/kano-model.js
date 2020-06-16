@@ -7,10 +7,12 @@ let velocity = [];
 
 function parameters() {
 	this.agent_num = 5;
+	this.num= 5;
 	this.k_p = 0.5;
 	this.k_m = 0.9;
 	this.k_a = 0.5;
 	this.reset = function() {
+		this.agent_num = this.num;
 		init();
 	}
 }
@@ -23,7 +25,7 @@ function setup() {
 	strokeWeight(5);
 	colorMode(HSB);
 	let gui = new dat.GUI();
-	gui.add(param,"agent_num",2,30).step(1);
+	gui.add(param,"num",2,30).step(1);
 	gui.add(param,"k_p",-5,5).step(0.1);
 	gui.add(param,"k_m",-5,5).step(0.1);
 	gui.add(param,"k_a",-5,5).step(0.1);
@@ -38,7 +40,7 @@ function draw() {
 
 	background(0);
 	textSize(30);
-	strokeWeight(5);
+	strokeWeight(10);
 	textFont("Comic Sans MS");
 	fill(255);
 	noStroke();
@@ -58,23 +60,23 @@ function draw() {
 				}
 			}
 		}
-		position[i].add(position[i]);
+		position[i].add(velocity[i]);
 		stroke(255);
-		line(position[i][0],position[i][1],position[i][0]-velocity[i][0],position[i][1]-velocity[i][1]);
+		line(position[i].x,position[i].y,position[i].x-velocity[i].x,position[i].y-velocity[i].y);
 	}
 }
 
 function init() {
 	background(0);
 	for(let i = 0;i<param.agent_num;++i){
-		position[i] = createVector(random(windowWidth),random(windowHeight));
+		position[i] = createVector(random(0.2*windowWidth,0.8*windowWidth),random(0.2*windowHeight,0.8*windowHeight));
 		velocity[i] = createVector(0,0);
 	}
 }
 
 function attract_vetcor(i,j,n) {
-	let distance = dist(position[i][0],position[i][1],position[j][0],position[j][1]);
-	let e = createVector(position[j][0]-position[i][0],position[j][1]-position[i][1]);
+	let distance = dist(position[i].x,position[i].y,position[j].x,position[j].y);
+	let e = createVector(position[j].x-position[i].x,position[j].y-position[i].y);
 	e.normalize();
 	if(n == 0){
 		e.mult((param.k_p+param.k_m)/distance-1/(distance*distance))

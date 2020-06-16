@@ -7,10 +7,12 @@ let velocity = [];
 
 function parameters() {
 	this.agent_num = 5;
+	this.num= 5;
 	this.k_p = 0.5;
 	this.k_m = 0.9;
 	this.k_a = 0.5;
 	this.reset = function() {
+		this.agent_num = this.num;
 		init();
 	}
 }
@@ -23,7 +25,7 @@ function setup() {
 	strokeWeight(5);
 	colorMode(HSB);
 	let gui = new dat.GUI();
-	gui.add(param,"agent_num",2,30).step(1);
+	gui.add(param,"num",2,30).step(1);
 	gui.add(param,"k_p",-5,5).step(0.1);
 	gui.add(param,"k_m",-5,5).step(0.1);
 	gui.add(param,"k_a",-5,5).step(0.1);
@@ -38,7 +40,7 @@ function draw() {
 
 	background(0);
 	textSize(30);
-	strokeWeight(5);
+	strokeWeight(10);
 	textFont("Comic Sans MS");
 	fill(255);
 	noStroke();
@@ -58,8 +60,8 @@ function draw() {
 				}
 			}
 		}
-		position[i].add(position[i]);
-		stroke(255,255,255);
+		position[i].add(velocity[i]);
+		stroke(255);
 		line(position[i].x,position[i].y,position[i].x-velocity[i].x,position[i].y-velocity[i].y);
 	}
 }
@@ -67,7 +69,7 @@ function draw() {
 function init() {
 	background(0);
 	for(let i = 0;i<param.agent_num;++i){
-		position[i] = createVector(random(width),random(height));
+		position[i] = createVector(random(0.2*windowWidth,0.8*windowWidth),random(0.2*windowHeight,0.8*windowHeight));
 		velocity[i] = createVector(0,0);
 	}
 }
