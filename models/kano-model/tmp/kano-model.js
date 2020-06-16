@@ -1,3 +1,6 @@
+//special thanks
+//https://www.openprocessing.org/sketch/873271
+
 let param;
 let position = [];
 let velocity = [];
@@ -56,14 +59,15 @@ function draw() {
 			}
 		}
 		position[i].add(position[i]);
-		line(position[i].x,position[i].y,position[x]-velocity[i].x,position[i].y-velocity[i].y);
+		stroke(255);
+		line(position[i].x,position[i].y,position[i]-velocity[i].x,position[i].y-velocity[i].y);
 	}
 }
 
 function init() {
 	background(0);
 	for(let i = 0;i<param.agent_num;++i){
-		position[i] = createVector(random(width),random(height));
+		position[i] = createVector(random(windowWidth),random(windowHeight));
 		velocity[i] = createVector(0,0);
 	}
 }
