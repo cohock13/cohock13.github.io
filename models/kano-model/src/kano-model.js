@@ -1,9 +1,9 @@
 //special thanks
 //https://www.openprocessing.org/sketch/873271
 
-var param;
-var position = [];
-var velocity = [];
+let param;
+let position = [];
+let velocity = [];
 
 function parameters() {
 	this.agent_num = 5;
@@ -22,7 +22,7 @@ function setup() {
 	init();
 	strokeWeight(5);
 	colorMode(HSB);
-	var gui = new dat.GUI();
+	let gui = new dat.GUI();
 	gui.add(param,"agent_num",2,30).step(1);
 	gui.add(param,"k_p",-5,5).step(0.1);
 	gui.add(param,"k_m",-5,5).step(0.1);
