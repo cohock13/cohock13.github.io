@@ -60,7 +60,7 @@ function draw() {
 		}
 		position[i].add(position[i]);
 		stroke(255);
-		line(position[i].x,position[i].y,position[i]-velocity[i].x,position[i].y-velocity[i].y);
+		line(position[i][0],position[i][1],position[i][0]-velocity[i][0],position[i][1]-velocity[i][1]);
 	}
 }
 
@@ -73,8 +73,8 @@ function init() {
 }
 
 function attract_vetcor(i,j,n) {
-	let distance = dist(position[i].x,position[i].y,position[j].x,position[j].y);
-	let e = createVector(position[j].x-position[i].x,position[j].y-position[i].y);
+	let distance = dist(position[i][0],position[i][1],position[j][0],position[j][1]);
+	let e = createVector(position[j][0]-position[i][0],position[j][1]-position[i][1]);
 	e.normalize();
 	if(n == 0){
 		e.mult((param.k_p+param.k_m)/distance-1/(distance*distance))
