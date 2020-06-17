@@ -2,13 +2,14 @@
 //https://www.openprocessing.org/sketch/873271
 
 let param;
-let scale_ = 1;
+let scale_ = 12.5;
 let position = [];
 let velocity = [];
 let x0 = 0;
 let y0 = 0;
 
 function parameters() {
+	this.mode = "A";
 	this.agent_num = 50;
 	this.num= 50;
 	this.kp = 0.4;
@@ -30,11 +31,12 @@ function setup() {
 	strokeWeight(5);
 	colorMode(RGB);
 	let gui = new dat.GUI();
+	gui.add(param,"mode",["A","A'","B","C","D","D'","E","F","F'","G","H","I","J","K","L","M","N","O","P","Q","R","S"])
 	gui.add(param,"num",2,70).step(1);
-	gui.add(param,"ka",-5,5).step(0.1);
-	gui.add(param,"kb",-5,5).step(0.1);
-	gui.add(param,"kp",-5,5).step(0.1);
-	gui.add(param,"km",-5,5).step(0.1);
+	gui.add(param,"ka",-3,3).step(0.1);
+	gui.add(param,"kb",-3,3).step(0.1);
+	gui.add(param,"kp",-3,3).step(0.1);
+	gui.add(param,"km",-3,3).step(0.1);
 	gui.add(param,"open_boundary");
 	gui.add(param,"reset");
 }
@@ -49,19 +51,20 @@ function mouseDragged() {
 }
 
 function mouseWheel(event) {
-	scale_ -= 0.0002*event.delta;
-	scale_ = constrain(scale_,0.0001,3);
+	scale_ -= 0.001*event.delta;
+	scale_ = constrain(scale_,0.0001,20);
 }
 function draw() {
 
 	background(0);
 	translate(windowWidth/2+x0,windowHeight/2+y0);
+	change_k();
 	textSize(30);
 	strokeWeight(10);
 	textFont("Comic Sans MS");
 	fill(255);
 	noStroke();
-	text(str(scale_),-windowWidth*0.5+windowWidth*0.03,-windowHeight*0.5+windowHeight*0.08);
+	text("Scope: "+str(round(100*scale_)),-windowWidth*0.5+windowWidth*0.03,-windowHeight*0.5+windowHeight*0.08);
 
 	for(let i = 0;i<param.agent_num;++i){
 		for(let j = 0;j<param.agent_num;++j){
@@ -76,15 +79,15 @@ function draw() {
 				}
 				else{
 					if(j <= 24){
-						velocity[i].add(attract_vetcor(i,j,3));
+						velocity[i].add(attract_vetcor(i,j,2));
 					}
 					else{
-						velocity[i].add(attract_vetcor(i,j,4))
+						velocity[i].add(attract_vetcor(i,j,3))
 					}
 				}
 			}
 		}
-		position[i].add(velocity[i]);
+		position[i].add(velocity[i].mult(0.1));
 		if(param.open_boundary == false){
 			if(position[i].x <= -windowWidth/2 || position[i].x >= windowWidth/2|| position[i].y <= -windowHeight/2 || position[i].y >= windowHeight/2){
 				velocity[i] = createVector(0,0);
@@ -92,12 +95,7 @@ function draw() {
 			position[i].x = constrain(position[i].x,-windowWidth/2,windowWidth/2);
 			position[i].y = constrain(position[i].y,-windowHeight/2,windowHeight/2);
 		}
-		if(i == 0){
-			stroke(255,0,0);
-		}
-		else{
-			stroke(255);
-		}
+		stroke(255);
 		line(scale_*position[i].x,scale_*position[i].y,scale_*position[i].x,scale_*position[i].y);
 	}
 }
@@ -128,6 +126,141 @@ function attract_vetcor(i,j,n) {
 	else{
 		amp = param.kb/distance - 1/(distance*distance);
 	}
-	e.mult(amp)
+	e.mult(amp);
 	return e;
+}
+
+function change_k() {
+	if (param.mode == "A"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = -0.4;
+		param.km = -0.8;
+	}
+	else if(param.mode == "A'"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.4;
+		param.km = 0.6;
+	}
+	else if(param.mode == "B"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = -0.2;
+		param.km = 0.0;
+	}
+	else if(param.mode == "C"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.4;
+		param.km = -0.2;
+	}
+	else if(param.mode == "D"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.2;
+		param.km = -0.4;
+	}
+	else if(param.mode == "D'"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.2;
+		param.km = 0.4;
+	}
+	else if(param.mode == "E"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.6;
+		param.km = -0.4;
+	}
+	else if(param.mode == "F"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = -0.4;
+		param.km = -0.8;
+	}
+	else if(param.mode == "F'"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.4;
+		param.km = 0.2;
+	}
+	else if(param.mode == "G"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.4;
+		param.km = 0.4;
+	}
+	else if(param.mode == "H"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.6;
+		param.km = -0.6;
+	}
+	else if(param.mode == "I"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.6;
+		param.km = -0.2;
+	}
+	else if(param.mode == "J"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.6;
+		param.km = 0.8;
+	}
+	else if(param.mode == "K"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = 0.8;
+		param.km = -0.8;
+	}
+	else if(param.mode == "L"){
+		param.ka = 1.2;
+		param.kb = 0.0;
+		param.kp = -0.0;
+		param.km = -0.4;
+	}
+	else if(param.mode == "M"){
+		param.ka = 0.8;
+		param.kb = 0.4;
+		param.kp = -0.4;
+		param.km = -0.8;
+	}
+	else if(param.mode == "N"){
+		param.ka = 0.4;
+		param.kb = -0.4;
+		param.kp = 0.8;
+		param.km = -0.8;
+	}
+	else if(param.mode == "O"){
+		param.ka = 0.4;
+		param.kb = 0.1;
+		param.kp = 0.6;
+		param.km = -0.7;
+	}
+	else if(param.mode == "P"){
+		param.ka = -0.8;
+		param.kb = -0.8;
+		param.kp = 1.2;
+		param.km = 0.2;
+	}
+	else if(param.mode == "Q"){
+		param.ka = -0.4;
+		param.kb = -0.8;
+		param.kp = 1.2;
+		param.km = -0.8;
+	}
+	else if(param.mode == "R"){
+		param.ka = 0.8;
+		param.kb = 0.0;
+		param.kp = 0.4;
+		param.km = -0.8;
+	}
+	else if(param.mode == "S"){
+		param.ka = -0.8;
+		param.kb = -0.8;
+		param.kp = 1.2;
+		param.km = 0.0;
+	}
 }
