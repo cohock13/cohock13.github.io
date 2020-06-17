@@ -9,7 +9,7 @@ let x0 = 0;
 let y0 = 0;
 
 function parameters() {
-	this.mode = "A";
+	this.mode = "FREE";
 	this.agent_num = 50;
 	this.num= 50;
 	this.kp = 0.4;
@@ -31,7 +31,7 @@ function setup() {
 	strokeWeight(5);
 	colorMode(RGB);
 	let gui = new dat.GUI();
-	gui.add(param,"mode",["A","A'","B","C","D","D'","E","F","F'","G","H","I","J","K","L","M","N","O","P","Q","R","S"])
+	gui.add(param,"mode",["FREE","A","A'","B","C","D","D'","E","F","F'","G","H","I","J","K","L","M","N","O","P","Q","R","S"])
 	gui.add(param,"num",2,70).step(1);
 	gui.add(param,"ka",-3,3).step(0.1);
 	gui.add(param,"kb",-3,3).step(0.1);
