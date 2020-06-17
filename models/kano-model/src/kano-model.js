@@ -49,7 +49,7 @@ function mouseDragged() {
 }
 
 function mouseWheel(event) {
-	scale_ += 0.0002*event.delta;
+	scale_ -= 0.0002*event.delta;
 	scale_ = constrain(scale_,0.0001,3);
 }
 function draw() {
