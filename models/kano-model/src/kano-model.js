@@ -2,15 +2,19 @@
 //https://www.openprocessing.org/sketch/873271
 
 let param;
+let scale_ = 1;
 let position = [];
 let velocity = [];
+let x0 = 0;
+let y0 = 0;
 
 function parameters() {
-	this.agent_num = 5;
-	this.num= 5;
-	this.k_p = 0.5;
-	this.k_m = 0.9;
-	this.k_a = 0.5;
+	this.agent_num = 50;
+	this.num= 50;
+	this.kp = 0.4;
+	this.km = 0.6;
+	this.ka = 0.8;
+	this.kb = 0.4;
 	this.open_boundary = false;
 	this.reset = function() {
 		this.agent_num = this.num;
@@ -26,10 +30,11 @@ function setup() {
 	strokeWeight(5);
 	colorMode(RGB);
 	let gui = new dat.GUI();
-	gui.add(param,"num",2,50).step(1);
-	gui.add(param,"k_p",-5,5).step(0.1);
-	gui.add(param,"k_m",-5,5).step(0.1);
-	gui.add(param,"k_a",-5,5).step(0.1);
+	gui.add(param,"num",2,70).step(1);
+	gui.add(param,"ka",-5,5).step(0.1);
+	gui.add(param,"kb",-5,5).step(0.1);
+	gui.add(param,"kp",-5,5).step(0.1);
+	gui.add(param,"km",-5,5).step(0.1);
 	gui.add(param,"open_boundary");
 	gui.add(param,"reset");
 }
@@ -38,37 +43,54 @@ function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
 
+function mouseDragged() {
+	x0 += mouseX - pmouseX;
+	y0 += mouseY - pmouseY;
+}
+
+function mouseWheel(event) {
+	scale_ += 0.0002*event.delta;
+	scale_ = constrain(scale_,0.0001,3);
+}
 function draw() {
 
 	background(0);
+	translate(windowWidth/2+x0,windowHeight/2+y0);
 	textSize(30);
 	strokeWeight(10);
 	textFont("Comic Sans MS");
 	fill(255);
 	noStroke();
-	text("遊び心で作った秩序形成の数理モデル(2018)",windowWidth*0.03,windowHeight*0.08);
+	text(str(scale_),-windowWidth*0.5+windowWidth*0.03,-windowHeight*0.5+windowHeight*0.08);
 
 	for(let i = 0;i<param.agent_num;++i){
 		for(let j = 0;j<param.agent_num;++j){
 			if(i != j){
-				if(i == 0){
-					velocity[i].add(attract_vetcor(i,j,0));
-				}
-				else if(j == 0){
-					velocity[i].add(attract_vetcor(i,j,1));
+				if(i <= 24){
+					if(j <= 24){
+						velocity[i].add(attract_vetcor(i,j,0));
+					}
+					else{
+						velocity[i].add(attract_vetcor(i,j,1));
+					}
 				}
 				else{
-					velocity[i].add(attract_vetcor(i,j,2));
+					if(j <= 24){
+						velocity[i].add(attract_vetcor(i,j,3));
+					}
+					else{
+						velocity[i].add(attract_vetcor(i,j,4))
+					}
 				}
 			}
 		}
 		position[i].add(velocity[i]);
 		if(param.open_boundary == false){
-			if(position[i].x <= 0 || position.x >= windowWidth || position[i].y <= 0 || position[i].y >= windowHeight){
+			if(position[i].x <= -windowWidth/2 || position[i].x >= windowWidth/2|| position[i].y <= -windowHeight/2 || position[i].y >= windowHeight/2){
 				velocity[i] = createVector(0,0);
 			}
-			position[i].x = constrain(position[i].x,0,windowWidth);
-			position[i].y = constrain(position[i].y,0,windowHeight);
+			position[i].x = constrain(position[i].x,-windowWidth/2,windowWidth/2);
+			position[i].y = constrain(position[i].y,-windowHeight/2,windowHeight/2);
 		}
 		if(i == 0){
 			stroke(255,0,0);
@@ -76,14 +98,17 @@ function draw() {
 		else{
 			stroke(255);
 		}
-		line(position[i].x,position[i].y,position[i].x,position[i].y);
+		line(scale_*position[i].x,scale_*position[i].y,scale_*position[i].x,scale_*position[i].y);
 	}
 }
 
 function init() {
 	background(0);
 	for(let i = 0;i<param.agent_num;++i){
-		position[i] = createVector(random(0.2*windowWidth,0.8*windowWidth),random(0.2*windowHeight,0.8*windowHeight));
+		let cx = windowWidth/2;
+		let cy = windowHeight/2;
+		position[i] = createVector(random(-5,5),random(-5,5));
+		//position[i] = createVector(random(0.2*windowWidth,0.8*windowWidth),random(0.2*windowHeight,0.8*windowHeight));
 		velocity[i] = createVector(0,0);
 	}
 }
@@ -94,11 +119,14 @@ function attract_vetcor(i,j,n) {
 	e.normalize();
 	let amp = 0;
 	if(n == 0){
-		amp = (param.k_p+param.k_m)/distance-1/(distance*distance);
+		amp = (param.ka)/distance-1/(distance*distance);
 	}else if(n == 1){
-		amp = (param.k_p-param.k_m)/distance-1/(distance*distance);
-	}else{
-		amp = (param.k_a)/distance-1/(distance*distance);
+		amp = (param.kp+param.km)/distance-1/(distance*distance);
+	}else if(n == 2){
+		amp = (param.kp-param.km)/distance-1/(distance*distance);
+	}
+	else{
+		amp = param.kb/distance - 1/(distance*distance);
 	}
 	e.mult(amp)
 	return e;
