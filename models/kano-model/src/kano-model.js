@@ -32,7 +32,7 @@ function setup() {
 	colorMode(RGB);
 	let gui = new dat.GUI();
 	gui.add(param,"mode",["A","A'","B","C","D","D'","E","F","F'","G","H","I","J","K","L","M","N","O","P","Q","R","S"])
-	gui.add(param,"num",2,150).step(1);
+	gui.add(param,"num",2,75).step(1);
 	gui.add(param,"ka",-3,3).step(0.1);
 	gui.add(param,"kb",-3,3).step(0.1);
 	gui.add(param,"kp",-3,3).step(0.1);
