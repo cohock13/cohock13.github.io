@@ -26,7 +26,7 @@ function setup() {
 	strokeWeight(5);
 	colorMode(RGB);
 	let gui = new dat.GUI();
-	gui.add(param,"num",2,30).step(1);
+	gui.add(param,"num",2,50).step(1);
 	gui.add(param,"k_p",-5,5).step(0.1);
 	gui.add(param,"k_m",-5,5).step(0.1);
 	gui.add(param,"k_a",-5,5).step(0.1);
@@ -64,6 +64,9 @@ function draw() {
 		}
 		position[i].add(velocity[i]);
 		if(param.open_boundary == false){
+			if(position[i].x <= 0 || position.x >= windowWidth || position[i].y <= 0 || position[i].y >= windowHeight){
+				velocity[i] = createVector(0,0);
+			}
 			position[i].x = constrain(position[i].x,0,windowWidth);
 			position[i].y = constrain(position[i].y,0,windowHeight);
 		}
@@ -89,12 +92,14 @@ function attract_vetcor(i,j,n) {
 	let distance = dist(position[i].x,position[i].y,position[j].x,position[j].y);
 	let e = createVector(position[j].x-position[i].x,position[j].y-position[i].y);
 	e.normalize();
+	let amp = 0;
 	if(n == 0){
-		e.mult((param.k_p+param.k_m)/distance-1/(distance*distance))
+		amp = (param.k_p+param.k_m)/distance-1/(distance*distance);
 	}else if(n == 1){
-		e.mult((param.k_p-param.k_m)/distance-1/(distance*distance));
+		amp = (param.k_p-param.k_m)/distance-1/(distance*distance);
 	}else{
-		e.mult((param.k_a)/distance-1/(distance*distance));
+		amp = (param.k_a)/distance-1/(distance*distance);
 	}
+	e.mult(amp)
 	return e;
 }
