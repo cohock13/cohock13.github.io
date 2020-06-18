@@ -37,7 +37,7 @@ function setup() {
 	gui.add(param,"kb",-3,3).step(0.1);
 	gui.add(param,"kp",-3,3).step(0.1);
 	gui.add(param,"km",-3,3).step(0.1);
-	gui.add(param,"open_boundary");
+	//gui.add(param,"open_boundary");
 	gui.add(param,"reset");
 }
 
@@ -65,38 +65,37 @@ function draw() {
 	fill(255);
 	noStroke();
 	text("Scope: "+str(round(100*scale_)),-windowWidth*0.5+windowWidth*0.03,-windowHeight*0.5+windowHeight*0.08);
-
-	for(let i = 0;i<param.agent_num;++i){
-		for(let j = 0;j<param.agent_num;++j){
-			if(i != j){
-				if(i <= 24){
-					if(j <= 24){
-						velocity[i].add(attract_vetcor(i,j,0));
+	for(let t = 0;t<10;++t){
+		for(let i = 0;i<param.agent_num;++i){
+			for(let j = 0;j<param.agent_num;++j){
+				if(i != j){
+					if(i <= int(param.agent_num/2)){
+						if(j <= 24){
+							velocity[i].add(attract_vetcor(i,j,0));
+						}
+						else{
+							velocity[i].add(attract_vetcor(i,j,1));
+						}
 					}
 					else{
-						velocity[i].add(attract_vetcor(i,j,1));
-					}
-				}
-				else{
-					if(j <= 24){
-						velocity[i].add(attract_vetcor(i,j,2));
-					}
-					else{
-						velocity[i].add(attract_vetcor(i,j,3))
+						if(j <= int(param.agent_num/2)){
+							velocity[i].add(attract_vetcor(i,j,2));
+						}
+						else{
+							velocity[i].add(attract_vetcor(i,j,3))
+						}
 					}
 				}
 			}
-		}
-		position[i].add(velocity[i].mult(0.1));
-		if(param.open_boundary == false){
-			if(position[i].x <= -windowWidth/2 || position[i].x >= windowWidth/2|| position[i].y <= -windowHeight/2 || position[i].y >= windowHeight/2){
-				velocity[i] = createVector(0,0);
+			if(i <= int(param.agent_num/2)){
+				stroke(255,0,0);
 			}
-			position[i].x = constrain(position[i].x,-windowWidth/2,windowWidth/2);
-			position[i].y = constrain(position[i].y,-windowHeight/2,windowHeight/2);
+			else{
+				stroke(0,0,255);
+			}
+			position[i].add(velocity[i].mult(0.005));
+			line(scale_*position[i].x,scale_*position[i].y,scale_*position[i].x,scale_*position[i].y);
 		}
-		stroke(255);
-		line(scale_*position[i].x,scale_*position[i].y,scale_*position[i].x,scale_*position[i].y);
 	}
 }
 
