@@ -18,6 +18,26 @@ function paramters() {
     background(255);
   }
 }
+/*
+Special Thanks
+https://p5js.org/examples/simulate-wolfram-ca.html
+*/
+let cells;
+let param;
+let velocity;
+let index;
+function paramters() {
+  this.w = 5;
+  this.width_ = 10;
+  this.generation = 0;
+  this.v_max = 2;
+  this.p = 0;
+  this.reset = function() {
+    clear();
+    init();
+    background(255);
+  }
+}
 
 function init(){
   param.w = param.width_;
@@ -27,7 +47,7 @@ function init(){
   cells[floor(cells.length/2)] = 1;
   //乱数でcellsの01を決定
   for(let i = 0;i < cells.length; ++i){
-    cells[i] = Math.round(random(min(0.5+0.1*param.w,0.7)));
+    cells[i] = Math.round(random(min(0.5+0.2*param.w,0.7)));
   }
   index = [];
   velocity = [];
@@ -53,7 +73,7 @@ function setup() {
   init();
   let gui = new dat.GUI();
   gui.add(param,"width_",0.5,10).step(0.5);
-  gui.add(param,"v_max",0,10).step(1);
+  gui.add(param,"v_max",0,15).step(1);
   gui.add(param,"p",0,1).step(0.05);
   gui.add(param,"reset");
 }
@@ -61,10 +81,10 @@ function setup() {
 function draw() {
   for (let i = 0; i < cells.length; i++) {
     if (cells[i] === 1) {
-      fill(255,0,0);
+      fill(230);
     } 
     else{
-      fill(0,255,0);
+      fill(40);
       noStroke();
       rect(i * param.w, param.generation*param.w, param.w, param.w);
     }
@@ -75,12 +95,18 @@ function draw() {
 }
 
 function update_cells() {
-  let tmp = Array(cell.length);
+  let tmp = Array(cells.length);
   for(let i = 0; i < cells.length; ++i){
     tmp[i] = 0;
   }
+  index = [];
+  for(let i = 0;i < cells.length; ++i){
+    if(cells[i] === 1){
+      index.push(i);
+    }
+  }
   let len = velocity.length;
-  let len_c = cell.length;
+  let len_c = cells.length;
   let dist = Array(len);
   //dist配列を計算
   for(let i = 0; i < len; ++i){
@@ -95,17 +121,12 @@ function update_cells() {
   for(let i = 0; i < len; ++i){
     let v = min(param.v_max,velocity[i]+1);
     v = min(v,dist[i]-1);
-    let p_ = random();
-    if(p_ < param.p){
+    if(random() < param.p){
       v = max(v-1,0);
     }
+
+    index[i] = (index[i]+v)%len_c;
     
-    if(index[i]+v < len_c){
-      index[i] += v;
-    }
-    else{
-      index[i] = v-(len_c-dist[i]);
-    }
     velocity[i] = v;
   }
 
