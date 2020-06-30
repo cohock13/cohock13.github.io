@@ -31,11 +31,11 @@ function init(){
 }
 
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight*0.9);
+  resizeCanvas(windowWidth, windowHeight*0.95);
 }
 
 function setup() {
-  createCanvas(windowWidth,windowHeight*0.9);
+  createCanvas(windowWidth,windowHeight*0.95);
   colorMode(RGB);
   background(230);
   param = new paramters();
