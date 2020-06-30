@@ -18,26 +18,6 @@ function paramters() {
     background(255);
   }
 }
-/*
-Special Thanks
-https://p5js.org/examples/simulate-wolfram-ca.html
-*/
-let cells;
-let param;
-let velocity;
-let index;
-function paramters() {
-  this.w = 5;
-  this.width_ = 10;
-  this.generation = 0;
-  this.v_max = 2;
-  this.p = 0;
-  this.reset = function() {
-    clear();
-    init();
-    background(255);
-  }
-}
 
 function init(){
   param.w = param.width_;
