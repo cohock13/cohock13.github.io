@@ -13,8 +13,8 @@ function paramters() {
   this.v_max = 2;
   this.p = 0;
   this.reset = function() {
-    init();
     clear();
+    init();
     background(255);
   }
 }
@@ -26,16 +26,16 @@ function init(){
   cells[0] = 1;
   cells[floor(cells.length/2)] = 1;
   //乱数でcellsの01を決定
-  for(let i = 0;i < cells.length;++i){
+  for(let i = 0;i < cells.length; ++i){
     cells[i] = Math.round(random(min(0.5+0.1*param.w,0.7)));
   }
-  index = Array();
-  velocity = Array();
+  index = [];
+  velocity = [];
   //cellsの1の部分のindex(0-based)を取る､|vel|=|index|
   for(let i = 0;i < cells.length; ++i){
     if(cells[i] === 1){
-      append(index,i);
-      append(velocity,0);
+      index.push(i);
+      velocity.push(0);
     }
   }
   param.generation = 0;
@@ -54,17 +54,17 @@ function setup() {
   let gui = new dat.GUI();
   gui.add(param,"width_",0.5,10).step(0.5);
   gui.add(param,"v_max",0,10).step(1);
-  gui.add(param,"p",0,1).step(0.1);
+  gui.add(param,"p",0,1).step(0.05);
   gui.add(param,"reset");
 }
 
 function draw() {
   for (let i = 0; i < cells.length; i++) {
     if (cells[i] === 1) {
-      fill(0);
+      fill(255,0,0);
     } 
     else{
-      fill(40);
+      fill(0,255,0);
       noStroke();
       rect(i * param.w, param.generation*param.w, param.w, param.w);
     }
@@ -75,18 +75,20 @@ function draw() {
 }
 
 function update_cells() {
-  for(let i = 0; i < len.cells;++i){
-    cells[i] = 0;
+  let tmp = Array(cell.length);
+  for(let i = 0; i < cells.length; ++i){
+    tmp[i] = 0;
   }
   let len = velocity.length;
+  let len_c = cell.length;
   let dist = Array(len);
   //dist配列を計算
   for(let i = 0; i < len; ++i){
     if(i === len-1){
-      append(dist,(len-index[i]-1+len[0]));
+      dist[i] = len_c-index[i]+index[0];
     }
     else{
-      append(dist,index[i+1]-index[i]);
+      dist[i] = index[i+1]-index[i];
     }
   }
   //vの更新
@@ -98,16 +100,19 @@ function update_cells() {
       v = max(v-1,0);
     }
     
-    if(index[i]+v < len){
+    if(index[i]+v < len_c){
       index[i] += v;
     }
     else{
-      index[i] += v - len;
+      index[i] = v-(len_c-dist[i]);
     }
     velocity[i] = v;
   }
 
   for(let i = 0; i < len ; ++i){
-    cells[index[i]] = 1;
+    tmp[index[i]] = 1;
   }
+
+  cells = tmp;
+  param.generation++;
 }
