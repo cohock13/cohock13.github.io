@@ -9,8 +9,8 @@ let generation = 0;
 let ruleset = [0, 1, 0, 1, 1, 0, 1, 0];
 
 function setup() {
-  createCanvas(640, 400);
-  background(244);
+  createCanvas(windowWidth,windowHeight);
+  background(240);
   cells = Array(floor(width / w));
   for (let i = 0; i < cells.length; i++) {
     cells[i] = 0;
