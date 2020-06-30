@@ -176,13 +176,13 @@ function change_k() {
 		param.ka = 0.8;
 		param.kb = 0.4;
 		param.kp = 0.6;
-		param.km = -0.4;
+		param.km = -0.8;
 	}
 	else if(param.mode == "F"){
 		param.ka = 0.8;
 		param.kb = 0.4;
-		param.kp = -0.4;
-		param.km = -0.8;
+		param.kp = 0.6;
+		param.km = -0.4;
 	}
 	else if(param.mode == "F'"){
 		param.ka = 0.8;
@@ -223,14 +223,14 @@ function change_k() {
 	else if(param.mode == "L"){
 		param.ka = 1.2;
 		param.kb = 0.0;
-		param.kp = -0.0;
+		param.kp = 0.0;
 		param.km = -0.4;
 	}
 	else if(param.mode == "M"){
-		param.ka = 0.8;
+		param.ka = 1.2;
 		param.kb = 0.4;
 		param.kp = -0.4;
-		param.km = -0.8;
+		param.km = -0.4;
 	}
 	else if(param.mode == "N"){
 		param.ka = 0.4;
