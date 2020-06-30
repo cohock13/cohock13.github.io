@@ -8,10 +8,10 @@ let velocity;
 let index;
 function paramters() {
   this.w = 5;
-  this.width_ = 10;
+  this.width_ = 5;
   this.generation = 0;
-  this.v_max = 2;
-  this.p = 0;
+  this.v_max = 5;
+  this.p = 0.5;
   this.reset = function() {
     clear();
     init();
