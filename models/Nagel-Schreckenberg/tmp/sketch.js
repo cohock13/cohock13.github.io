@@ -1,35 +1,62 @@
-let w = 10;
-// An array of 0s and 1s
+/*
+Special Thanks
+https://p5js.org/examples/simulate-wolfram-ca.html
+*/
 let cells;
+let param;
 
- // We arbitrarily start with just the middle cell having a state of "1"
-let generation = 0;
-
-// An array to store the ruleset, for example {0,1,1,0,1,1,0,1}
 let ruleset = [0, 1, 0, 1, 1, 0, 1, 0];
 
-function setup() {
-  createCanvas(windowWidth,windowHeight);
-  background(240);
-  cells = Array(floor(width / w));
-  for (let i = 0; i < cells.length; i++) {
-    cells[i] = 0;
+function paramters() {
+  this.w = 10;
+  this.width_ = 10;
+  this.generation = 0;
+  this.reset = function() {
+    init();
+    clear();
+    background(230);
   }
-  cells[cells.length/2] = 1;
+}
 
+function init(){
+  param.w = param.width_;
+  cells = Array(floor(windowWidth/param.w));
+  //乱数でcellsの01を決定
+  for(let i = 0;i < cells.length;++i){
+    cells[i] = Math.round(random());
+  }
+  param.generation = 0;
+
+  //clear();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight*0.9);
+}
+
+function setup() {
+  createCanvas(windowWidth,windowHeight*0.9);
+  colorMode(RGB);
+  background(230);
+  param = new paramters();
+  init();
+  let gui = new dat.GUI();
+  gui.add(param,"width_",0.5,10).step(0.5);
+  gui.add(param,"reset");
 }
 
 function draw() {
   for (let i = 0; i < cells.length; i++) {
     if (cells[i] === 1) {
-      fill(200);
-    } else {
-      fill(51);
+      fill(230);
+    } 
+    else{
+      fill(40);
       noStroke();
-      rect(i * w, generation * w, w, w);
+      rect(i * param.w, param.generation*param.w, param.w, param.w);
     }
   }
-  if (generation < height/w) {
+  if (param.generation < windowHeight*0.9/param.w) {
     generate();
   }
 }
@@ -48,7 +75,7 @@ function generate() {
   }
   // The current generation is the new generation
   cells = nextgen;
-  generation++;
+  param.generation++;
 }
 
 
