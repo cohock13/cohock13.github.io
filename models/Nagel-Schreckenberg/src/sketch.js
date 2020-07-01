@@ -52,7 +52,7 @@ function setup() {
   param = new paramters();
   init();
   let gui = new dat.GUI();
-  gui.add(param,"width_",0.5,10).step(0.5);
+  gui.add(param,"width_",0.5,10).step(1);
   gui.add(param,"v_max",0,15).step(1);
   gui.add(param,"p",0,1).step(0.05);
   gui.add(param,"reset");
