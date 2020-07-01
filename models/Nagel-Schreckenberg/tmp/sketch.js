@@ -8,10 +8,11 @@ let velocity;
 let index;
 function paramters() {
   this.w = 5;
-  this.width_ = 10;
+  this.width_ = 5;
   this.generation = 0;
-  this.v_max = 2;
-  this.p = 0;
+  this.v_max = 5;
+  this.p = 0.5;
+  this.cars = 100;
   this.reset = function() {
     clear();
     init();
@@ -22,13 +23,7 @@ function paramters() {
 function init(){
   param.w = param.width_;
   cells = Array(floor(windowWidth/param.w));
-  //要素が2以下だと後で困るので
-  cells[0] = 1;
-  cells[floor(cells.length/2)] = 1;
-  //乱数でcellsの01を決定
-  for(let i = 0;i < cells.length; ++i){
-    cells[i] = Math.round(random(min(0.5+0.2*param.w,0.7)));
-  }
+  init_cells();
   index = [];
   velocity = [];
   //cellsの1の部分のindex(0-based)を取る､|vel|=|index|
@@ -39,6 +34,29 @@ function init(){
     }
   }
   param.generation = 0;
+}
+
+function init_cells() {
+  let l = cells.length;
+  for(let i = 0 ; i < l ; ++i){
+    cells[i] = 0;
+  }
+  //ランダムに初期位置を決定
+  let n = min(param.cars,l);
+  let index = [];
+
+  for(let i = 0; i < l ; ++i){
+    index[i] = i;
+  }
+  for(let i = 0; i < l ; ++i){
+    let rnd = Math.floor(random()*(i+1));
+    let tmp = index[i];
+    index[i] = index[rnd];
+    index[rnd] = tmp;
+  }
+  for(let i = 0; i < n ; ++i){
+    cells[index[i]] = 1;
+  }
 }
 
 function windowResized() {
@@ -52,7 +70,8 @@ function setup() {
   param = new paramters();
   init();
   let gui = new dat.GUI();
-  gui.add(param,"width_",0.5,10).step(0.5);
+  gui.add(param,"width_",0.5,10).step(1);
+  gui.add(param,"cars",2,500).step(1);
   gui.add(param,"v_max",0,15).step(1);
   gui.add(param,"p",0,1).step(0.05);
   gui.add(param,"reset");
