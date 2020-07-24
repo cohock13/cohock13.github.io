@@ -13,7 +13,7 @@ let y0 = 0;
 function parameters() {
 	this.n = 10;
 	this.a = 20;
-	this.k = 0.02;
+	this.k = 0.07;
 	this.rts = 50;
 	this.reset = function() {
 		init();
