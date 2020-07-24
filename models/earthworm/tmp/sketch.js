@@ -52,6 +52,7 @@ function setup() {
 	param = new parameters();
 	background(255);
 	init();
+	let gui = new dat.GUI();
 	gui.add(param,"rts",10,150).step(10);
 	gui.add(param,"n",3,100).step(1);
 	gui.add(param,"m",1,10).step(0.1);
@@ -114,7 +115,7 @@ function CalcForce(i,delta){
 		return param.k*(len[i-1]-rts[i-1]) - param.a/len[i-1]*delta;
 	}
 	else{
-		return param.k*(len[i-1]-rts[i-1]) - param.k(len[i]-rts[i]) - param.a/(len[i-1]+len[i])*2*delta;
+		return param.k*(len[i-1]-rts[i-1]) - param.k*(len[i]-rts[i]) - param.a/(len[i-1]+len[i])*2*delta;
 	}
 
 }
