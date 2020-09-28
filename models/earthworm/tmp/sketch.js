@@ -9,8 +9,7 @@ let y0 = 0;
 //GUIにセットするためのパラメータ群
 function parameters() {
 	this.n = 10;
-	this.a = 1;
-	this.k = 3;
+	this.r = 0.01;
 	this.rts = 50;
 	this.reset = function() {
 		init();
@@ -109,7 +108,7 @@ function CalcForce(i,j){
 
 		let l_back = pos[i]-pos[i+1]+k[i][j-1]-k[i+1][j-1];
 
-		return -param.k/param.a*l_back*(l_back-param.rts);
+		return -param.r*l_back*(l_back-param.rts);
 
 	}
 	else if(i === 1){
@@ -118,7 +117,7 @@ function CalcForce(i,j){
 		let l_back = pos[i]-pos[i+1]+k[i][j-1]-k[i+1][j-1];
 		let rts_back = l_front;
 
-		return param.k/param.a*(l_front-param.rts-l_back+rts_back);
+		return param.r*(l_front-param.rts-l_back+rts_back);
 
 	}
 	else if(i === pos.length -1){
@@ -126,7 +125,7 @@ function CalcForce(i,j){
 		let l_front = pos[i-1]-pos[i]+k[i-1][j-1]-k[i][j-1];
 		let rts_front = pos[i-2]-pos[i-1]+k[i-2][j-1]-k[i-1][j-1];
 
-		return param.k/param.a*l_front*(l_front-rts_front);
+		return param.r*l_front*(l_front-rts_front);
 
 	}
 	else{
@@ -135,7 +134,7 @@ function CalcForce(i,j){
 		let l_back = pos[i]-pos[i+1]+k[i][j-1]-k[i+1][j-1];
 		let rts_back = l_front;
 
-		return param.k/param.a*(l_front-rts_front-l_back+rts_back);
+		return param.r*(l_front-rts_front-l_back+rts_back);
 
 	}
 
@@ -143,15 +142,19 @@ function CalcForce(i,j){
 //更新された座標をもとに，ミミズの体を長方形を用いて描く．
 function DrawBody() {
 	for(let i = 0; i < pos.length-1; ++i){
+		strokeWeight(10);
 		if(i === 1){
 			fill(color(240,128,128));
 			stroke(100);
-			rect(scale_*(2*pos[i+1]-pos[i]),scale_*(-5),scale_*(pos[i]-pos[i+1]),60*scale_,5*scale_);
+			//rect(scale_*(2*pos[i+1]-pos[i]),scale_*(-5),scale_*(pos[i]-pos[i+1]),60*scale_,5*scale_);
+			line(pos[i],scale_*-5,pos[i],5*scale_);
+
 		}
 		else{
 			fill(color(255,182,193));
 			stroke(100);
-			rect(scale_*(2*pos[i+1]-pos[i]),0,scale_*(pos[i]-pos[i+1]),50*scale_,5*scale_);
+			//rect(scale_*(2*pos[i+1]-pos[i]),0,scale_*(pos[i]-pos[i+1]),50*scale_,5*scale_);
+			line(pos[i],scale_*-5,pos[i],5*scale_);
 		}
 		//rect(scale_*pos[i],0,scale_*len[i],50*scale_,20*scale_);
 	}
