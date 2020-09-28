@@ -112,6 +112,15 @@ function CalcForce(i,j){
 		return -param.k/param.a*l_back*(l_back-param.rts);
 
 	}
+	else if(i === 1){
+
+		let l_front = pos[i-1]-pos[i]+k[i-1][j-1]-k[i][j-1];
+		let l_back = pos[i]-pos[i+1]+k[i][j-1]-k[i+1][j-1];
+		let rts_back = l_front;
+
+		return param.k/param.a*(l_front-param.rts-l_back+rts_back);
+
+	}
 	else if(i === pos.length -1){
 
 		let l_front = pos[i-1]-pos[i]+k[i-1][j-1]-k[i][j-1];
@@ -121,11 +130,10 @@ function CalcForce(i,j){
 
 	}
 	else{
-
 		let l_front = pos[i-1]-pos[i]+k[i-1][j-1]-k[i][j-1];
 		let rts_front = pos[i-2]-pos[i-1]+k[i-2][j-1]-k[i-1][j-1];
 		let l_back = pos[i]-pos[i+1]+k[i][j-1]-k[i+1][j-1];
-		let rts_back = pos[i-1]-pos[i]+k[i-1][j-1]-k[i][j-1];
+		let rts_back = l_front;
 
 		return param.k/param.a*(l_front-rts_front-l_back+rts_back);
 
