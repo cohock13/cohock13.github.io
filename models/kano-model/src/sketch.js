@@ -35,10 +35,10 @@ function setup() {
 	let gui = new dat.GUI();
 	gui.add(param,"mode",["FREE","A","A'","B","C","D","D'","E","F","F'","G","H","I","J","K","L","M","N","O","P","Q","R","S"])
 	gui.add(param,"num",2,100).step(1);
-	gui.add(param,"ka",-3,3).step(0.1);
-	gui.add(param,"kb",-3,3).step(0.1);
-	gui.add(param,"kp",-3,3).step(0.1);
-	gui.add(param,"km",-3,3).step(0.1);
+	gui.add(param,"ka",-3,3).step(0.1).listen();
+	gui.add(param,"kb",-3,3).step(0.1).listen();
+	gui.add(param,"kp",-3,3).step(0.1).listen();
+	gui.add(param,"km",-3,3).step(0.1).listen();
 	//gui.add(param,"open_boundary");
 	gui.add(param,"reset");
 }
