@@ -150,20 +150,21 @@ function CalcForce(i,j){
 }
 //更新された座標をもとに，ミミズの体を長方形を用いて描く．
 function DrawBody() {
-	for(let i = 0; i < pos.length; ++i){
-		strokeWeight(10);
+	rectMode(CORNERS);
+	strokeJoin(ROUND);
+	for(let i = 0; i < pos.length-1; ++i){
 		if(i === 1){
 			fill(color(240,128,128));
 			stroke(100);
-			//rect(scale_*(2*pos[i+1]-pos[i]),scale_*(-5),scale_*(pos[i]-pos[i+1]),60*scale_,5*scale_);
-			line(pos[i],scale_*-5,pos[i],-5*scale_);
+			rect(scale_*pos[i+1],scale_*25,scale_*pos[i],scale_*-25);
+			//line(pos[i],scale_*-5,pos[i],-5*scale_);
 
 		}
 		else{
 			fill(color(255,182,193));
 			stroke(100);
-			//rect(scale_*(2*pos[i+1]-pos[i]),0,scale_*(pos[i]-pos[i+1]),50*scale_,5*scale_);
-			line(pos[i],scale_*-5,pos[i],-5*scale_);
+			rect(scale_*pos[i+1],scale_*20,scale_*pos[i],scale_*-20);
+			//line(pos[i],scale_*-5,pos[i],-5*scale_);
 		}
 		//rect(scale_*pos[i],0,scale_*len[i],50*scale_,20*scale_);
 	}
