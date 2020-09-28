@@ -2,18 +2,14 @@ let param;
 let scale_ = 1;
 let dt = 0.05;
 let pos = [];
-let vel = [];
-let rts = [];
-let len = [];
+let k;
 let x0 = 0;
 let y0 = 0;
 
 //GUIにセットするためのパラメータ群
-//aはa/m，kはk/mです．OVモデルよろしくパラメータがシビアなので固定しています．
 function parameters() {
 	this.n = 10;
-	this.a = 20;
-	this.k = 0.07;
+	this.r = 0;
 	this.rts = 50;
 	this.reset = function() {
 		init();
@@ -43,6 +39,7 @@ function setup() {
 	init();
 	let gui = new dat.GUI();
 	gui.add(param,"rts",30,70).step(0.5);
+	gui.add(param,"r",0,0.1).step(0.001).listen();
 	gui.add(param,"n",4,30).step(1);
 	gui.add(param,"reset");
 }
@@ -54,11 +51,17 @@ function init(){
 	x0 = 0;
 	y0 = 0;
 	pos = Array(param.n);
-	vel = Array(param.n);
 	for(let i = 0 ; i < param.n; ++i){
 		pos[i] = (param.n/2-i)*50;
-		vel[i] = 0;
 	}
+
+	//ルンゲクッタ用
+	k = new Array(pos.length);
+	for(let i = 0; i < pos.length; ++i){
+		k[i] = new Array(5);
+		k[i][0] = 0;
+	}
+
 }
 
 //繰り返し呼ばれる作画関数．translateは中央に座標(0,0)を持っていく操作．
@@ -67,8 +70,6 @@ function draw(){
 		background(12);
 		translate(windowWidth/2+x0,windowHeight/2+y0);
 
-		UpdateLength();
-		UpdateRTS();
 		DrawBody();
 		UpdatePosition();
 
@@ -78,69 +79,92 @@ function draw(){
 		text("進んだ距離："+str(round(pos[0]-pos.length*25)),-windowWidth*0.5+windowWidth*0.07,-windowHeight*0.5+windowHeight*0.15);
 }
 
-//pos(座標)から質点間の長さを計算．
-function UpdateLength(){
-	len = Array(pos.length-1);
-	for(let i = 0; i < pos.length - 1; ++i){
-		len[i] = pos[i]-pos[i+1];
-	}
-}
-//lenから各質点間のRTSを計算．i=0においてはパラメータ群から参照する．
-function UpdateRTS(){
-	rts = Array(len.length);
-	for(let i = 0; i < rts.length; ++i){
-		if(i === 0){
-			rts[i] = param.rts;
-		}
-		else {
-			rts[i] = len[i-1];
-		}
-	}
-}
 //ルンゲクッタを用いて，座標を更新する．
 function UpdatePosition() {
 	//Runge-Kutta(4th)
-	let h1,h2,h3,h4,k1,k2,k3,k4;
+
+	//k1~k4の計算
 	for(let i = 0 ; i < pos.length; ++i){
-		v = vel[i]
-		k1 = dt*v;
-		h1 = dt*CalcForce(i,v);
-		k2 = dt*(v+h1/2);
-		h2 = dt*CalcForce(i,v+k1/2);
-		k3 = dt*(v+h2/2);
-		h3 = dt*CalcForce(i,v+k2/2);
-		k4 = dt*(v+h3);
-		h4 = dt*CalcForce(i,v+k3);
-		pos[i] += (k1+2*k2+2*k3+k4)/6;
-		vel[i] += (h1+2*h2+2*h3+h4)/6;
+		k[i][1] = dt*CalcForce(i,1);
 	}
+	for(let i = 0 ; i < pos.length; ++i){
+		k[i][2] = dt*CalcForce(i,2);
+	}
+	for(let i = 0 ; i < pos.length; ++i){
+		k[i][3] = dt*CalcForce(i,3);
+	}
+	for(let i = 0 ; i < pos.length; ++i){
+		k[i][4] = dt*CalcForce(i,4);
+	}
+	for(let i = 0 ; i < pos.length; ++i){
+		pos[i] += (k[i][1]+2*k[i][2]+2*k[i][3]+k[i][4])/6;
+	}
+
 }
 
 //i番目の質点に働く力を返す．
-function CalcForce(i,delta){
+function CalcForce(i,j){
+
+	//ルンゲクッタの係数．k2とk3で/2する用 
+	let p = 1;
+
+	if(j === 2 || j === 3){
+		p = 0.5
+	}
+
 	if(i === 0){
-		return -param.k*(len[i]-param.rts) - param.a/len[i]*delta;
+
+		let l_back = pos[i]-pos[i+1]+p*k[i][j-1]-p*k[i+1][j-1];
+
+		return -param.r*l_back*(l_back-param.rts);
+
+	}
+	else if(i === 1){
+
+		let l_front = pos[i-1]-pos[i]+p*k[i-1][j-1]-p*k[i][j-1];
+		let l_back = pos[i]-pos[i+1]+p*k[i][j-1]-p*k[i+1][j-1];
+		let rts_back = l_front;
+
+		return param.r*(l_front+l_back)/2*(l_front-param.rts-l_back+rts_back);
+
 	}
 	else if(i === pos.length -1){
-		return param.k*(len[i-1]-rts[i-1]) - param.a/len[i-1]*delta;
+
+		let l_front = pos[i-1]-pos[i]+p*k[i-1][j-1]-p*k[i][j-1];
+		let rts_front = pos[i-2]-pos[i-1]+p*k[i-2][j-1]-p*k[i-1][j-1];
+
+		return param.r*l_front*(l_front-rts_front);
+
 	}
 	else{
-		return param.k*(len[i-1]-rts[i-1]) - param.k*(len[i]-rts[i]) - param.a/(len[i-1]+len[i])*2*delta;
+
+		let l_front = pos[i-1]-pos[i]+p*k[i-1][j-1]-p*k[i][j-1];
+		let rts_front = pos[i-2]-pos[i-1]+p*k[i-2][j-1]-p*k[i-1][j-1];
+		let l_back = pos[i]-pos[i+1]+p*k[i][j-1]-p*k[i+1][j-1];
+		let rts_back = l_front;
+
+		return param.r*(l_front+l_back)/2*(l_front-rts_front-l_back+rts_back);
+
 	}
 
 }
 //更新された座標をもとに，ミミズの体を長方形を用いて描く．
 function DrawBody() {
+	rectMode(CORNERS);
+	strokeJoin(ROUND);
 	for(let i = 0; i < pos.length-1; ++i){
 		if(i === 1){
 			fill(color(240,128,128));
 			stroke(100);
-			rect(scale_*(pos[i]-len[i]),scale_*(-5),scale_*len[i],60*scale_,5*scale_);
+			rect(scale_*pos[i+1],scale_*25,scale_*pos[i],scale_*-25);
+			//line(pos[i],scale_*-5,pos[i],-5*scale_);
+
 		}
 		else{
 			fill(color(255,182,193));
 			stroke(100);
-			rect(scale_*(pos[i]-len[i]),0,scale_*len[i],50*scale_,5*scale_);
+			rect(scale_*pos[i+1],scale_*20,scale_*pos[i],scale_*-20);
+			//line(pos[i],scale_*-5,pos[i],-5*scale_);
 		}
 		//rect(scale_*pos[i],0,scale_*len[i],50*scale_,20*scale_);
 	}
