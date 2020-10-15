@@ -24,15 +24,15 @@ function parameters(){
 	this.minSpeed = 0.1;
 	
 	this.CohesionForce = 0.1;
-	this.CohesionDistance = 1;
+	this.CohesionDistance = 0.5;
 	this.CohesionAngle = 40;
 
 	this.SeparationForce = 0.1;
-	this.SeparationDistance = 1;
+	this.SeparationDistance = 0.5;
 	this.SeparationAngle = 40;
 
 	this.AlignmentForce = 0.1;
-	this.AlignmentDistance = 1;
+	this.AlignmentDistance = 0.5;
 	this.AlignmentAngle = 40;
 
 	this.Reset = function(){
@@ -59,12 +59,12 @@ function setup(){
 	console.log(Dw.EasyCam.INFO);
 
 	//GUI関連
-	let param = new parameters();
+	param = new parameters();
 	let gui = new dat.GUI();
 
 	gui.addColor(param,"color");
 	gui.add(param,"N",5,100).step(1);
-	gui.add(param,"Maxspeed",0.1,1.0,0.001);
+	//gui.add(param,"maxspeed",0.1,1.0,0.001);
 	gui.add(param,"minSpeed",0,0.1,0.001);
 
 	let cohesionControl = gui.addFolder("Cohesion");
@@ -74,16 +74,16 @@ function setup(){
 	cohesionControl.open();
 
 	let separationControl = gui.addFolder("Separation");
-	cohesionControl.add(param,"CeparationForce",0,1,0.01);
-	cohesionControl.add(param,"CeparationDistance",0,1,0.01);
-	cohesionControl.add(param,"CeparationAngle",0,180,1);
+	separationControl.add(param,"SeparationForce",0,1,0.01);
+	separationControl.add(param,"SeparationDistance",0,1,0.01);
+	separationControl.add(param,"SeparationAngle",0,180,1);
 	separationControl.open();
 
 
 	let alignmentControl = gui.addFolder("Alignment");
-	cohesionControl.add(param,"AlignmentForce",0,1,0.01);
-	cohesionControl.add(param,"AlignmentDistance",0,1,0.01);
-	cohesionControl.add(param,"AlignmentAngle",0,180,1);
+	alignmentControl.add(param,"AlignmentForce",0,1,0.01);
+	alignmentControl.add(param,"AlignmentDistance",0,1,0.01);
+	alignmentControl.add(param,"AlignmentAngle",0,180,1);
 	alignmentControl.open()
 
 	gui.add(param,"Reset");
@@ -103,7 +103,7 @@ function init(){
 
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
-	//easycam.setViewport([0,0,windowWidth, windowHeight]);
+	easycam.setViewport([0,0,windowWidth, windowHeight]);
 }
 
 
@@ -116,7 +116,7 @@ function draw(){
 }
 
 function drawBoids(){
-	for(let i = 0 ; i < param.N ; ++i){
+	for(let i = 0 ; i < boids.length ; ++i){
 		boids[i].drawBody();
 	}
 }
@@ -127,11 +127,11 @@ function updateBoids(){
 	angleMode(DEGREES);
 
 	//tmpForceの初期化
-	for(let i = 0; i < param.N ; ++i){
+	for(let i = 0; i < boids.length ; ++i){
 		tmpForce[i] = createVector(0,0,0);
 	}
 
-	for(let i = 0; i < param.N ; ++i){
+	for(let i = 0; i < boids.length ; ++i){
 
 		cohesion = [];
 		separation = [];
@@ -139,7 +139,7 @@ function updateBoids(){
 		//click = [];
 
 		//候補抜粋 
-		for(let j = 0; j < param.N ; ++j){
+		for(let j = 0; j < boids.length ; ++j){
 
 			distance = dist(boids[i].pos.x,boids[i].pos.y,boids[i].pos.z,boids[j].pos.x,boids[j].pos.y,boids[j].pos.z);
 			angle = abs(boids[i].vel.angleBetween(p5.Vector.sub(boids[j].pos,boids[i].pos)));
@@ -206,7 +206,7 @@ function updateBoids(){
 		//Click
 	}
 
-	for(let i = 0 ; i < param.N ; ++i){
+	for(let i = 0 ; i < boids.length ; ++i){
 		boids[i].vel.add(tmpForce[i].mult(dt));
 		boids[i].pos.add(boids[i].vel.mult(dt));
 	}
@@ -218,8 +218,8 @@ class boid{
 	constructor(){
 
 		this.pos = createVector(random(windowWidth/2),random(windowHeight/2),random((windowHeight+windowWidth)/4))
-		this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
-
+		//this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
+        this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
 	}
 
 	drawBody(){
