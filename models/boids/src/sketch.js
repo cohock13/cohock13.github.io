@@ -20,8 +20,6 @@ function parameters(){
 
 	this.N = 20;
 
-	this.ClickMode = "Attract";
-
 	this.MaxSpeed = 0.5;
 	this.minSpeed = 0.1;
 	
@@ -56,7 +54,7 @@ function setup(){
 		rotation : [1,1,0,0],
 	};
 
-	easycam = new Dw.EasyCam(this._renderer,initState);
+	easycam = new Dw.EasyCam(p5.RendererGL,initState);
 
 	console.log(Dw.EasyCam.INFO);
 
@@ -65,9 +63,8 @@ function setup(){
 	let gui = new dat.GUI();
 
 	gui.addColor(param,"color");
-	gui.add(param,"N",5,100,1);
-	//gui.add(param,"Mode",["View","Attract","Repel"])
-	gui.add(param,"Maxspeed",0.1,1,0.001);
+	gui.add(param,"N",5,100).step(1);
+	gui.add(param,"Maxspeed",0.1,1.0,0.001);
 	gui.add(param,"minSpeed",0,0.1,0.001);
 
 	let cohesionControl = gui.addFolder("Cohesion");
@@ -106,7 +103,7 @@ function init(){
 
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
-	easycam.setViewport([0,0,windowWidth, windowHeight]);
+	//easycam.setViewport([0,0,windowWidth, windowHeight]);
 }
 
 
@@ -231,7 +228,7 @@ class boid{
 		translate(this.pos.x,this.pos.y,this.pos.z);
 		anbientMaterial(param.color);
 		noStroke();
-
+		sphere(40);
 		//Coneの向きの計算(3次元極座標)
 		
 		pop();
