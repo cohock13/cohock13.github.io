@@ -226,7 +226,7 @@ class boid{
 
 		push();
 		translate(this.pos.x,this.pos.y,this.pos.z);
-		anbientMaterial(param.color);
+		ambientMaterial(param.color);
 		noStroke();
 		sphere(40);
 		//Coneの向きの計算(3次元極座標)
