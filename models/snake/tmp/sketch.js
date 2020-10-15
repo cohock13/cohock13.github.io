@@ -9,16 +9,22 @@ let vel = [];//速度
 let k,h;
 
 
+//ばね定数などのパラメータ．GUIには入れないことにしました
+let k1 = 0.1;
+let c1 = 0.1;
+
+
 //GUIにセットするためのパラメータ群
 function parameters() {
 	this.n = 10;
-	this.r = 0;
-	this.rts = 50;
+	this.bodyLength = 50;
+	this.headAngle = 0;
+	this.mu_t = 0.3;
+	this.mu_n = 0.4;
 	this.reset = function() {
 		init();
 	}
 }
-
 
 //setup関数(最初に1度だけ読み込まれる)，GUIの操作など
 function setup() {
@@ -26,9 +32,12 @@ function setup() {
 	param = new parameters();
 	init();
 	let gui = new dat.GUI();
-	gui.add(param,"rts",30,70).step(0.5);
-	gui.add(param,"r",0,0.1).step(0.001).listen();
+	gui.add(param,"angleMode",["sinWave","sawtoothWave","manual"])
+	gui.add(param,"headAngle",-45,45).step(1).listen();
+	gui.add(param,"bodyLength",1,10).step(0.1);
 	gui.add(param,"n",4,30).step(1);
+	gui.add(param,"mu_t",0,2).step(0.1);
+	gui.add(param,"mu_n",0,2).step(0.1);
 	gui.add(param,"reset");
 }
 
@@ -41,14 +50,13 @@ function init(){
 	x0 = 0;
 	y0 = 0;
 
-
 	//位置と速度の配列
 	pos = new Array(param.n);
 	vel = new Array(param.n);
 	for(let i = 0; i < param.n; ++i){
-		pos[i] = new Array(2).fill(0);
-		vel[i] = new Array(2).fill(0);
-		pos[i][1] = 50*(param.n-i);
+		pos[i] = createVector(0,0);
+		vel[i] = createVector(0,0);
+		pos[i].y = param.bodyLength*(param.n-i);
 		}
 	}
 
@@ -59,99 +67,178 @@ function init(){
 		k[i] = new Array(5);
 		h[i] = new Array(5);
 		for(let j = 0; j < 5;++j){
-			k[j] = new Array(2).fill(0);
-			h[j] = new Array(2).fill(0);
+			k[i][j] = createVector(0,0);
+			h[i][j] = createVector(0,0);
 		}
 	}
-
 }
 
 //繰り返し呼ばれる作画関数．
 function draw(){
 
 	    //背景の設定
-		SetBackground();
+		setBackground();
 
 		//座標を計算する
-		DrawBody();
-		UpdatePosition();
+		drawBody();
+		updatePosition();
 }
 
 
-//座標と速度を更新する．
-function UpdatePosition() {
+//座標(と速度)を更新する．
+function updatePosition() {
 	//Runge-Kutta(4th)
-	v = vel[i]
-	//k1~k4の計算
+
+	/*
+	ライブラリに使用しているVectorは以下のように演算をしています．
+	v1 += v2  -> v1.add(v2);
+	v1 *= a -> v1.mult(a);
+	v3 = v1 + v2 -> v3 = p5.Vector.add(v1,v2);
+	v3 = v1・v2 -> v3 = p5.Vector.dot(v1,v2);
+	*/
+
+	//k1~k4,h1~h4の計算
+	v = vel[i];
 	for(let i = 0 ; i < pos.length; ++i){
-		f = CalcForce(i,1);
-		k[i][1][0] = dt*f[0];
-		k[i][1][1] = dt*f[1];
-		h[i][1][0] = dt*v[0];
-		h[i][1][1] = dt*v[1];
+		k[i][1] = calcForce(i,1);
+		h[i][1] = v;
 	}
 	for(let i = 0 ; i < pos.length; ++i){
-		f = CalcForce(i,2);
-		k[i][2][0] = dt*f[0];
-		k[i][2][1] = dt*f[1];
-		h[i][2][0] = dt*(v[0]+k[i][1][0]/2);
-		h[i][2][1] = dt*(v[1]+k[i][1][1]/2);
+		k[i][2] = calcForce(i,2);
+		h[i][2] = p5.Vector.add(v,k[i][1].mult(0.5));
 	}
 	for(let i = 0 ; i < pos.length; ++i){
-		f = CalcForce(i,3);
-		k[i][3][0] = dt*f[0];
-		k[i][3][1] = dt*f[1];
-		h[i][3][0] = dt*(v[0]+k[i][2][0]/2);
-		h[i][3][1] = dt*(v[1]+k[i][2][1]/2);
+		k[i][3] = calcForce(i,3);
+		h[i][3] = p5.Vector.add(v,k[i][2].mult(0.5));
 	}
 	for(let i = 0 ; i < pos.length; ++i){
-		f = CalcForce(i,4);
-		k[i][4][0] = dt*f[0];
-		k[i][4][1] = dt*f[1];
-		h[i][4][0] = dt*(v[0]+k[i][3][0]);
-		h[i][4][1] = dt*(v[1]+k[i][3][1]);
+		k[i][4] = calcForce(i,4);
+		h[i][4] = p5.Vector.add(v,k[i][3]);
 	}
+	//位置と速度の更新
 	for(let i = 0 ; i < pos.length; ++i){
-		pos[i][0] += (k[i][1][0]+2*k[i][2][0]+2*k[i][3][0]+k[i][4][0])/6;
-		pos[i][1] += (k[i][1][1]+2*k[i][2][1]+2*k[i][3][1]+k[i][4][1])/6;
-		vel[i][0] += (h[i][1][0]+2*h[i][2][0]+2*h[i][3][0]+h[i][4][0])/6;
-		vel[i][1] += (h[i][1][1]+2*h[i][2][1]+2*h[i][3][1]+h[i][4][1])/6;
+		pos[i].add((k[i][1].add(k[i][2].mult(2).add(k[i][3].mult(2),add(k[i][4])))).mult(dt/6));
+		vel[i].add((h[i][1].add(h[i][2].mult(2).add(h[i][3].mult(2),add(h[i][4])))).mult(dt/6));
 	}
 
 }
+
 
 //i番目の質点に働く力を返す．
-function CalcForce(i,j){
+function calcForce(i,j){
+
+	//ルンゲクッタ用
+	let p = 1;
+	if(j === 2 || j === 3){
+		p = 0.5;
+	}
+
+	//あらかじめ単位ベクトルを計算しておく
+	calcEtVector();
+	calcEnVector();
+
 	//CalcBodyForce() ばねダンパにおける力
 	//CalcTorqueForce() トルクの力
 	//CalcFrictionForce() 摩擦力
-	return CalcBodyForce(i,j) + CalcTorqueForce(i,j) + CalcFrictionForce(i,j);
+	return p5.Vector.add(calcBodyForce(i,j,p).add(calcTorqueForce(i,j,p).add(calcFrictionForce(i,j,p))));
 }
 
-function CalcBodyForce(i,j){
+function calcBodyForce(i,j,p){
+
+	let frontForce = createVector(0,0);
+	let backForce = createVector(0,0);
+
+	if(i === 0){
+		return
+	}
+	else if(i === pos.length-1){
+		return 
+	}
+	else{
+		return 
+	}
 
 }
 
-function CalcTorqueForce(i,j){
+function calcTorqueForce(i,j,p){
+	
+	//トルクの計算
+	torque = calcTorque(i,j,p);
+	//長さの計算
+	len = calcLength(i,j,p);
+
+	if(i === 0){
+		return p5.Vector.mult(enVector1[i],torque[i+1]/len[i]);
+	}
+	else if(i === 1){
+		return p5.Vector.add(enVector1[i-1].mult(-torque[i]/len[i-1]),enVector1[i].mult((torque[i+1]-torque[i])/len[i]));
+	}
+	else if(i === pos.length-2){
+		return p5.Vector.add(enVector1[i-1].mult((torque[i-1]-torque[i])/len[i-1]),enVector1[i].mult(-torque[i]/len[i]))
+	}
+	else if(i === pos.length-1){
+		return p5.Vector.mult(enVector1[i-1],torque[i-1]/len[i-1]);
+	}
+	else{
+		return p5.Vector.add(enVector1[i-1].mult((torque[i-1]-torque[i])/len[i-1]),enVector1[i].mult((torque[i+1]-torque[i])/len[i]));
+	}
+}
+
+function calcTorque(i,j,p){
 
 }
 
-function CalcFrictionForce(i,j){
+function calcLength(i,j,p){
+
+}
+
+function calcFrictionForce(i,j,p){
+
+	//体軸接線,法線方向のベクトルを計算
+	calcFrictionEtVector();
+	calcFrictionEnVector();
+
+	let ft = -param.mu_t*(p5.Vector.dot(vel[i].add(k[i][j-1].mult(p)),etVector2[i]));
+	let fn = -param.mu_n*(p5.Vector.dot(vel[i].add(k[i][j-1].mult(p)),enVector2[i]));
+
+	return p5.Vector.add(etVector2[i].mult(ft),enVector2[i].mult(fn));
+	
+
+}
+
+//単位ベクトル計算部分 Vector1は質点間，Vector2は質点のベクトルです
+/*
+ 正規化：normalize();
+ 回転：rotate();
+*/
+function calcEnVector(){
+
+}
+
+function calcEtVector(){
+
+}
+
+function calcFrictionEnVector(){
+
+}
+
+function calcFrictionEtVector(){
 
 }
 
 //更新された座標をもとに，蛇の体を描く．
-function DrawBody() {
+function drawBody() {
 
 	strokeJoin(ROUND);
 	strokeWeight(10);
 	stroke(124,252,0);
 	for(let i = 0; i < pos.length-1; ++i){
-		line(pos[i][0],pos[i][1],pos[i+1][0],pos[i+1][1]);
+		line(pos[i].x,pos[i].y,pos[i+1].x,pos[i+1].y);
 	}
 }
 
-function SetBackground(){
+function setBackground(){
 	clear();
 	background(12);
 	translate(windowWidth/2+x0,windowHeight/2+y0);
