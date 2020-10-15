@@ -1,272 +1,240 @@
-//special thanks
-//https://www.openprocessing.org/sketch/873271
+/* Special Thanks
 
-let param;
-let scale_ = 20;
-let position = [];
-let velocity = [];
-let x0 = 0;
-let y0 = 0;
 
-function parameters() {
-	this.mode = "FREE";
-	this.agent_num = 50;
-	this.num= 50;
-	this.kp = 0.4;
-	this.km = 0.6;
-	this.ka = 0.8;
-	this.kb = 0.4;
-	this.open_boundary = false;
-	this.reset = function() {
-		x0 = 0;
-		y0 = 0;
-		this.agent_num = this.num;
+
+
+
+
+*/
+
+let easycam,param;
+let boids = [];
+let tmpForce = [];
+
+//刻み幅
+let dt = 0.01;
+
+function parameters(){
+
+	this.color = "rgb(27,232,100)";
+
+	this.N = 20;
+
+	this.ClickMode = "Attract";
+
+	this.MaxSpeed = 0.5;
+	this.minSpeed = 0.1;
+	
+	this.CohesionForce = 0.1;
+	this.CohesionDistance = 1;
+	this.CohesionAngle = 40;
+
+	this.SeparationForce = 0.1;
+	this.SeparationDistance = 1;
+	this.SeparationAngle = 40;
+
+	this.AlignmentForce = 0.1;
+	this.AlignmentDistance = 1;
+	this.AlignmentAngle = 40;
+
+	this.Reset = function(){
 		init();
-	}
+	};
+	
 }
 
-function setup() {
-	createCanvas(windowWidth,windowHeight);
-	param = new parameters();
-	background(0);
-	init();
-	strokeWeight(5);
-	colorMode(RGB);
+
+function setup(){
+
+	//Canvas周辺
+	createCanvas(windowWidth,windowHeight,WEBGL);
+	setAttributes("antialias",true);
+
+	var initState = {
+		distance : 20,
+		center   : [0,0,0],
+		rotation : [1,1,0,0],
+	};
+
+	easycam = new Dw.EasyCam(this._renderer,initState);
+
+	console.log(Dw.EasyCam.INFO);
+
+	//GUI関連
+	let param = new parameters();
 	let gui = new dat.GUI();
-	gui.add(param,"mode",["FREE","A","A'","B","C","D","D'","E","F","F'","G","H","I","J","K","L","M","N","O","P","Q","R","S"])
-	gui.add(param,"num",2,100).step(1);
-	gui.add(param,"ka",-3,3).step(0.1).listen();
-	gui.add(param,"kb",-3,3).step(0.1).listen();
-	gui.add(param,"kp",-3,3).step(0.1).listen();
-	gui.add(param,"km",-3,3).step(0.1).listen();
-	//gui.add(param,"open_boundary");
-	gui.add(param,"reset");
+
+	gui.addColor(param,"color");
+	gui.add(param,"N",5,100,1);
+	//gui.add(param,"Mode",["View","Attract","Repel"])
+	gui.add(param,"Maxspeed",0.1,1,0.001);
+	gui.add(param,"minSpeed",0,0.1,0.001);
+
+	let cohesionControl = gui.addFolder("Cohesion");
+	cohesionControl.add(param,"CohesionForce",0,1,0.01);
+	cohesionControl.add(param,"CohesionDistance",0,1,0.01);
+	cohesionControl.add(param,"CohesionAngle",0,180,1);
+	cohesionControl.open();
+
+	let separationControl = gui.addFolder("Separation");
+	cohesionControl.add(param,"CeparationForce",0,1,0.01);
+	cohesionControl.add(param,"CeparationDistance",0,1,0.01);
+	cohesionControl.add(param,"CeparationAngle",0,180,1);
+	separationControl.open();
+
+
+	let alignmentControl = gui.addFolder("Alignment");
+	cohesionControl.add(param,"AlignmentForce",0,1,0.01);
+	cohesionControl.add(param,"AlignmentDistance",0,1,0.01);
+	cohesionControl.add(param,"AlignmentAngle",0,180,1);
+	alignmentControl.open()
+
+	gui.add(param,"Reset");
+	
+	angleMode(DEGREES);
+	init();
+
+}
+
+function init(){
+
+	for(let i = 0 ; i < param.N ; ++i){
+		boids[i] = new boid();
+	}
+
 }
 
 function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
+	resizeCanvas(windowWidth, windowHeight);
+	easycam.setViewport([0,0,windowWidth, windowHeight]);
 }
 
-function mouseWheel(event) {
-	scale_ -= 0.003*event.delta;
-	scale_ = constrain(scale_,0.0001,50);
-}
 
-function mouseDragged() {
-	if(mouseX <= windowWidth/2 || mouseY >= windowHeight/2){
-		x0 += mouseX - pmouseX;
-		y0 += mouseY - pmouseY;
-	}
-
-}
-function draw() {
+function draw(){
 
 	background(0);
-	translate(windowWidth/2+x0,windowHeight/2+y0);
-	change_k();
-	textSize(30);
-	strokeWeight(10);
-	textFont("Comic Sans MS");
-	fill(255);
-	noStroke();
-	text("Scope: "+str(round(100*scale_)),-windowWidth*0.5+windowWidth*0.03,-windowHeight*0.5+windowHeight*0.08);
-	
-	for(let t = 0;t<15;++t){
-		for(let i = 0;i<param.agent_num;++i){
-			for(let j = 0;j<param.agent_num;++j){
-				if(i != j){
-					if(i <= int(param.agent_num/2)){
-						if(j <= 24){
-							velocity[i].add(attract_vetcor(i,j,0));
-						}
-						else{
-							velocity[i].add(attract_vetcor(i,j,1));
-						}
-					}
-					else{
-						if(j <= int(param.agent_num/2)){
-							velocity[i].add(attract_vetcor(i,j,2));
-						}
-						else{
-							velocity[i].add(attract_vetcor(i,j,3))
-						}
-					}
+	drawBoids();
+	updateBoids();
+
+}
+
+function drawBoids(){
+	for(let i = 0 ; i < param.N ; ++i){
+		boids[i].drawBody();
+	}
+}
+
+function updateBoids(){
+
+	//ねんのため
+	angleMode(DEGREES);
+
+	//tmpForceの初期化
+	for(let i = 0; i < param.N ; ++i){
+		tmpForce[i] = createVector(0,0,0);
+	}
+
+	for(let i = 0; i < param.N ; ++i){
+
+		cohesion = [];
+		separation = [];
+		alignment = [];
+		//click = [];
+
+		//候補抜粋 
+		for(let j = 0; j < param.N ; ++j){
+
+			distance = dist(boids[i].pos.x,boids[i].pos.y,boids[i].pos.z,boids[j].pos.x,boids[j].pos.y,boids[j].pos.z);
+			angle = abs(boids[i].vel.angleBetween(p5.Vector.sub(boids[j].pos,boids[i].pos)));
+
+			if(i = !j){
+				//Cohesion
+				if(distance <= param.CohesionDistance && angle <= param.CohesionAngle){
+					cohesion.push(boids[j].pos);
 				}
+
+				//Separation
+				if(distance <= param.SeparationDistance && angle <= param.SeparationAngle){
+					separation.push(p5.Vector.sub(boids[i].pos,boids[j].pos));
+				}
+
+				//Alignment
+				if(distance <= param.AlignmentDistance && angle <= param.AlignmentAngle){
+					alignment.push(boids[j].vel);
+				}
+
+
+				//Click(Attract or Repel)
+				
+
+
 			}
-			if(i <= int(param.agent_num/2)){
-				stroke(255,0,0);
-			}
-			else{
-				stroke(0,0,255);
-			}
-			position[i].add(velocity[i].mult(0.005));
-			line(scale_*position[i].x,scale_*position[i].y,scale_*position[i].x,scale_*position[i].y);
 		}
+
+		//Cohesion
+		if(cohesion.length > 0){
+			cohesionForceVector = createVector(0,0,0);
+			for(let i = 0 ; i < cohesion.length ; ++i){
+				cohesionForceVector.add(cohesion[i]);
+			}
+			cohesionForceVector.mult(1/cohesion.length);
+			cohesionForceVector.sub(boids[i].pos);
+			cohesionForceVector.mult(CohesionForce);
+			tmpForce[i].add(cohesionForceVector);
+		}
+
+		//Separation
+		if(separation.length > 0){
+			separationForceVector = createVector(0,0,0);
+			for(let i = 0 ; i < separation.length ; ++i){
+				separationForceVector.add(separation[i]);
+			}
+			separationForceVector.mult(SeparationForce)
+			tmpForce[i].add(separationForceVector);
+		}
+
+		//Alignment
+		if(alignment.length > 0){
+			alignmentForceVector = createVector(0,0,0);
+			for(let i = 0 ; i < alignment.length ; ++i){
+				alignmentForceVector.add(alignment[i]);
+			}
+			alignmentForceVector.mult(1/alignment.length);
+			alignmentForceVector.sub(boids[i].vel);
+			alignmentForceVector.mult(AlignmentForce);
+			tmpForce[i].add(alignmentForceVector);
+			
+		}
+		
+		//Click
 	}
+
+	for(let i = 0 ; i < param.N ; ++i){
+		boids[i].vel.add(tmpForce[i].mult(dt));
+		boids[i].pos.add(boids[i].vel.mult(dt));
+	}
+
 }
 
-function init() {
-	background(0);
-	for(let i = 0;i<param.agent_num;++i){
-		let cx = windowWidth/2;
-		let cy = windowHeight/2;
-		position[i] = createVector(random(-5,5),random(-5,5));
-		//position[i] = createVector(random(0.2*windowWidth,0.8*windowWidth),random(0.2*windowHeight,0.8*windowHeight));
-		velocity[i] = createVector(0,0);
-	}
-}
+class boid{
 
-function attract_vetcor(i,j,n) {
-	let distance = dist(position[i].x,position[i].y,position[j].x,position[j].y);
-	let e = createVector(position[j].x-position[i].x,position[j].y-position[i].y);
-	e.normalize();
-	let amp = 0;
-	if(n == 0){
-		amp = (param.ka)/distance-1/(distance*distance);
-	}else if(n == 1){
-		amp = (param.kp+param.km)/distance-1/(distance*distance);
-	}else if(n == 2){
-		amp = (param.kp-param.km)/distance-1/(distance*distance);
-	}
-	else{
-		amp = param.kb/distance - 1/(distance*distance);
-	}
-	e.mult(amp);
-	return e;
-}
+	constructor(){
 
-function change_k() {
-	if (param.mode == "A"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = -0.4;
-		param.km = -0.8;
+		this.pos = createVector(random(windowWidth/2),random(windowHeight/2),random((windowHeight+windowWidth)/4))
+		this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
+
 	}
-	else if(param.mode == "A'"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.4;
-		param.km = 0.6;
+
+	drawBody(){
+
+		push();
+		translate(this.pos.x,this.pos.y,this.pos.z);
+		anbientMaterial(param.color);
+		noStroke();
+
+		//Coneの向きの計算(3次元極座標)
+		
+		pop();
+
 	}
-	else if(param.mode == "B"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = -0.2;
-		param.km = 0.0;
-	}
-	else if(param.mode == "C"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.4;
-		param.km = -0.2;
-	}
-	else if(param.mode == "D"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.2;
-		param.km = -0.4;
-	}
-	else if(param.mode == "D'"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.2;
-		param.km = 0.4;
-	}
-	else if(param.mode == "E"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.6;
-		param.km = -0.8;
-	}
-	else if(param.mode == "F"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.6;
-		param.km = -0.4;
-	}
-	else if(param.mode == "F'"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.4;
-		param.km = 0.2;
-	}
-	else if(param.mode == "G"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.4;
-		param.km = 0.4;
-	}
-	else if(param.mode == "H"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.6;
-		param.km = -0.6;
-	}
-	else if(param.mode == "I"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.6;
-		param.km = -0.2;
-	}
-	else if(param.mode == "J"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.6;
-		param.km = 0.8;
-	}
-	else if(param.mode == "K"){
-		param.ka = 0.8;
-		param.kb = 0.4;
-		param.kp = 0.8;
-		param.km = -0.8;
-	}
-	else if(param.mode == "L"){
-		param.ka = 1.2;
-		param.kb = 0.0;
-		param.kp = 0.0;
-		param.km = -0.4;
-	}
-	else if(param.mode == "M"){
-		param.ka = 1.2;
-		param.kb = 0.4;
-		param.kp = -0.4;
-		param.km = -0.4;
-	}
-	else if(param.mode == "N"){
-		param.ka = 0.4;
-		param.kb = -0.4;
-		param.kp = 0.8;
-		param.km = -0.8;
-	}
-	else if(param.mode == "O"){
-		param.ka = 0.4;
-		param.kb = 0.1;
-		param.kp = 0.6;
-		param.km = -0.7;
-	}
-	else if(param.mode == "P"){
-		param.ka = -0.8;
-		param.kb = -0.8;
-		param.kp = 1.2;
-		param.km = 0.2;
-	}
-	else if(param.mode == "Q"){
-		param.ka = -0.4;
-		param.kb = -0.8;
-		param.kp = 1.2;
-		param.km = -0.8;
-	}
-	else if(param.mode == "R"){
-		param.ka = 0.8;
-		param.kb = 0.0;
-		param.kp = 0.4;
-		param.km = -0.8;
-	}
-	else if(param.mode == "S"){
-		param.ka = -0.8;
-		param.kb = -0.8;
-		param.kp = 1.2;
-		param.km = 0.0;
-	}
-	
 }
