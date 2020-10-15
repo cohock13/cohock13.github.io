@@ -133,6 +133,8 @@ function updateBoids(){
 
 	for(let i = 0; i < boids.length ; ++i){
 
+		console.log(boids[i].pos);
+
 		cohesion = [];
 		separation = [];
 		alignment = [];
@@ -217,7 +219,7 @@ class boid{
 
 	constructor(){
 
-		this.pos = createVector(random(windowWidth/2),random(windowHeight/2),random((windowHeight+windowWidth)/4))
+		this.pos = createVector(random(windowWidth/2),random(windowHeight/2),random((windowHeight+windowWidth)/4));
 		//this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
         this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
 	}
