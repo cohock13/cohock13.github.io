@@ -48,7 +48,7 @@ function setup(){
 	setAttributes("antialias",true);
 
 	var initState = {
-		distance : 20,
+		distance : 10000,
 		center   : [0,0,0],
 		rotation : [1,1,0,0],
 	};
@@ -137,17 +137,17 @@ function updateBoids(){
 		alignment = [];
 		//click = [];
 
-		let pos1 = boids[i].pos();
-		let vel1 = boids[i].vel();
+		pos1 = boids[i].pos();
+		vel1 = boids[i].vel();
 
 		//候補抜粋 
 		for(let j = 0; j < boids.length ; ++j){
 
-			let pos2 = boids[j].pos();
-			let vel2 = boids[j].vel();
+			pos2 = boids[j].pos;
+			vel2 = boids[j].vel;
 
-			let distance = pos1.dist(pos2);
-			let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
+			distance = pos1.dist(pos2);
+			angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
 
 			if(i = !j){
 				//Cohesion
@@ -226,7 +226,7 @@ class boid{
         //this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
 	}
 
-	p5.Vector pos(){
+	pos(){
 		return this.position;
 	}
 
