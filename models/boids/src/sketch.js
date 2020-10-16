@@ -132,22 +132,22 @@ function updateBoids(){
 
 	for(let i = 0; i < boids.length ; ++i){
 
-		cohesion = [];
-		separation = [];
-		alignment = [];
+		let cohesion = [];
+		let separation = [];
+		let alignment = [];
 		//click = [];
 
-		pos1 = boids[i].pos();
-		vel1 = boids[i].vel();
+		let pos1 = boids[i].pos();
+		let vel1 = boids[i].vel();
 
 		//候補抜粋 
 		for(let j = 0; j < boids.length ; ++j){
 
-			pos2 = boids[j].pos;
-			vel2 = boids[j].vel;
+			let pos2 = boids[j].pos;
+			let vel2 = boids[j].vel;
 
-			distance = pos1.dist(pos2);
-			angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
+			let distance = pos1.dist(pos2);
+			let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
 
 			if(i = !j){
 				//Cohesion
@@ -157,7 +157,8 @@ function updateBoids(){
 
 				//Separation
 				if(distance <= param.SeparationDistance && angle <= param.SeparationAngle){
-					separation.push(p5.Vector.sub(pos1,pos2));
+					let tmp = p5.Vector.sub(pos1,pos2)
+					separation.push(tmp);
 				}
 
 				//Alignment
@@ -175,7 +176,7 @@ function updateBoids(){
 
 		//Cohesion
 		if(cohesion.length > 0){
-			cohesionForceVector = createVector(0,0,0);
+			let cohesionForceVector = createVector(0,0,0);
 			for(let i = 0 ; i < cohesion.length ; ++i){
 				cohesionForceVector.add(cohesion[i]);
 			}
@@ -187,7 +188,7 @@ function updateBoids(){
 
 		//Separation
 		if(separation.length > 0){
-			separationForceVector = createVector(0,0,0);
+			let separationForceVector = createVector(0,0,0);
 			for(let i = 0 ; i < separation.length ; ++i){
 				separationForceVector.add(separation[i]);
 			}
