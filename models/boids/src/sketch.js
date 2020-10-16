@@ -19,21 +19,24 @@ function parameters(){
 
 	this.color = "rgb(27,232,100)";
 
-	this.N = 20;
+	this.N = 100;
 	this.minSpeed = 500;
 	this.MaxSpeed = 1500;
 	
 	this.CohesionForce = 3;
-	this.CohesionDistance = 20;
-	this.CohesionAngle = 40;
+	this.CohesionDistance = 300;
+	this.CohesionAngle = 120;
 
 	this.SeparationForce = 3;
-	this.SeparationDistance = 20;
-	this.SeparationAngle = 40;
+	this.SeparationDistance = 400;
+	this.SeparationAngle = 120;
 
 	this.AlignmentForce = 3;
-	this.AlignmentDistance = 20;
-	this.AlignmentAngle = 40;
+	this.AlignmentDistance = 500;
+	this.AlignmentAngle = 120;
+
+	this.CenterAttractMode = true;
+	this.CenterAttractForce = 3;
 
 	this.Reset = function(){
 		init();
@@ -65,21 +68,26 @@ function setup(){
 	let cohesionControl = gui.addFolder("Cohesion");
 	cohesionControl.add(param,"CohesionForce",0,30,0.1);
 	cohesionControl.add(param,"CohesionDistance",0,1000,1);
-	//cohesionControl.add(param,"CohesionAngle",0,180,1);
+	cohesionControl.add(param,"CohesionAngle",0,180,1);
 	cohesionControl.open();
 
 	let separationControl = gui.addFolder("Separation");
 	separationControl.add(param,"SeparationForce",0,30,0.1);
 	separationControl.add(param,"SeparationDistance",0,1000,1);
-	//separationControl.add(param,"SeparationAngle",0,180,1);
+	separationControl.add(param,"SeparationAngle",0,180,1);
 	separationControl.open();
 
 
 	let alignmentControl = gui.addFolder("Alignment");
 	alignmentControl.add(param,"AlignmentForce",0,30,0.1);
 	alignmentControl.add(param,"AlignmentDistance",0,1000,1);
-	//alignmentControl.add(param,"AlignmentAngle",0,180,1);
+	alignmentControl.add(param,"AlignmentAngle",0,180,1);
 	alignmentControl.open();
+
+	let centerAttractControl = gui.addFolder("CenterAttract");
+	centerAttractControl.add(param,"CenterAttractMode");
+	centerAttractControl.add(param,"CenterAttractForce",0,10,0.1);
+	//centerAttractControl.open();
 
 	gui.add(param,"Reset");
 
@@ -143,23 +151,23 @@ function updateBoids(){
 			let pos2 = boids[j].copyPosition();
 			let vel2 = boids[j].copyVelocity();
 			
-			let distance = pos1.dist(pos2);
-			//let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
-			
 			if(i !== j){
+
+				let distance = pos1.dist(pos2);
+				let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
 				
 				//Cohesion
-				if(distance <= param.CohesionDistance){
+				if(distance <= param.CohesionDistance && angle <= param.CohesionAngle){
 					cohesion.push(pos2);
 				}
 
 				//Separation
-				if(distance <= param.SeparationDistance){
+				if(distance <= param.SeparationDistance && angle <= param.SeparationAngle){
 					separation.push(p5.Vector.sub(pos1,pos2));
 				}
 
 				//Alignment
-				if(distance <= param.AlignmentDistance){
+				if(distance <= param.AlignmentDistance && angle <= param.AlignmentAngle){
 					alignment.push(vel2);
 				}
 				
@@ -206,10 +214,12 @@ function updateBoids(){
 		}
 
 		//CenterForce
-		let centerAttractForceVector = createVector(0,0,0);
-		centerAttractForceVector.add(pos1);
-		centerAttractForceVector.mult(pos1.mag()-windowWidth/3).mult(-3).div(pos1.mag());
-		tmpForce[i].add(centerAttractForceVector);
+		if(param.CenterAttractMode){
+			let centerAttractForceVector = createVector(0,0,0);
+			centerAttractForceVector.add(pos1);
+			centerAttractForceVector.mult(pos1.mag()-windowWidth/3).mult(-3).div(pos1.mag());
+			tmpForce[i].add(centerAttractForceVector);
+		}
 
 		//Click
 		
