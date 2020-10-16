@@ -19,9 +19,8 @@ function parameters(){
 	this.color = "rgb(27,232,100)";
 
 	this.N = 20;
-
-	this.MaxSpeed = 0.5;
 	this.minSpeed = 0.1;
+	this.MaxSpeed = 0.5;
 	
 	this.CohesionForce = 0.1;
 	this.CohesionDistance = 0.5;
@@ -64,7 +63,7 @@ function setup(){
 
 	gui.addColor(param,"color");
 	gui.add(param,"N",5,100).step(1);
-	//gui.add(param,"maxspeed",0.1,1.0,0.001);
+	gui.add(param,"MaxSpeed",0.1,1,0.001);
 	gui.add(param,"minSpeed",0,0.1,0.001);
 
 	let cohesionControl = gui.addFolder("Cohesion");
@@ -133,18 +132,19 @@ function updateBoids(){
 
 	for(let i = 0; i < boids.length ; ++i){
 
-		console.log(boids[i].pos);
-
 		cohesion = [];
 		separation = [];
 		alignment = [];
 		//click = [];
 
+		posPresent = boids[i].pos;
+		velPresent = boids[i].vel;
+
 		//候補抜粋 
 		for(let j = 0; j < boids.length ; ++j){
 
-			distance = boids[i].pos.dist(boids[j].pos);
-			angle = abs(boids[i].vel.angleBetween(p5.Vector.sub(boids[j].pos,boids[i].pos)));
+			distance = posPresent.dist(boids[j].pos);
+			angle = abs(velPresent.angleBetween(p5.Vector.sub(boids[j].pos,boids[i].pos)));
 
 			if(i = !j){
 				//Cohesion
@@ -209,8 +209,7 @@ function updateBoids(){
 	}
 
 	for(let i = 0 ; i < boids.length ; ++i){
-		boids[i].vel.add(tmpForce[i].mult(dt));
-		boids[i].pos.add(boids[i].vel.mult(dt));
+		boids[i].updatePosition();
 	}
 
 }
@@ -219,9 +218,16 @@ class boid{
 
 	constructor(){
 
-		this.pos = createVector(random(windowWidth/2),random(windowHeight/2),random((windowHeight+windowWidth)/4));
-		//this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
-        this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
+		this.pos = createVector(random(-windowWidth/2,windowWidth/2),random(-windowHeight/2,windowHeight/2),random((windowHeight+windowWidth)/4));
+		this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
+        //this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
+	}
+
+	updatePosition(v){
+
+		this.vel.add(v.mult(dt));
+		this.pos.add(this.vel.mult(dt));
+
 	}
 
 	drawBody(){
@@ -230,7 +236,7 @@ class boid{
 		translate(this.pos.x,this.pos.y,this.pos.z);
 		ambientMaterial(param.color);
 		noStroke();
-		sphere(40);
+		sphere(3);
 		//Coneの向きの計算(3次元極座標)
 		
 		pop();
