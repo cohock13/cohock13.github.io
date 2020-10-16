@@ -8,8 +8,7 @@
 */
 
 let easycam,param;
-let pos = [];
-let vel = [];
+let boids = [];
 let tmpForce = [];
 let n;
 
@@ -21,8 +20,8 @@ function parameters(){
 	this.color = "rgb(27,232,100)";
 
 	this.N = 20;
-	this.minSpeed = 20;
-	this.MaxSpeed = 500;
+	this.minSpeed = 500;
+	this.MaxSpeed = 1500;
 	
 	this.CohesionForce = 3;
 	this.CohesionDistance = 20;
@@ -59,26 +58,26 @@ function setup(){
 	let gui = new dat.GUI();
 
 	gui.addColor(param,"color");
-	gui.add(param,"N",5,200,1);
-	gui.add(param,"MaxSpeed",100,700,10);
-	gui.add(param,"minSpeed",0,100,1);
+	gui.add(param,"N",5,500,1);
+	gui.add(param,"MaxSpeed",1000,2000,10);
+	gui.add(param,"minSpeed",0,1000,10);
 
 	let cohesionControl = gui.addFolder("Cohesion");
-	cohesionControl.add(param,"CohesionForce",0,300,0.1);
-	cohesionControl.add(param,"CohesionDistance",0,2000,1);
+	cohesionControl.add(param,"CohesionForce",0,30,0.1);
+	cohesionControl.add(param,"CohesionDistance",0,1000,1);
 	//cohesionControl.add(param,"CohesionAngle",0,180,1);
 	cohesionControl.open();
 
 	let separationControl = gui.addFolder("Separation");
-	separationControl.add(param,"SeparationForce",0,3,0.01);
-	separationControl.add(param,"SeparationDistance",0,1500,1);
+	separationControl.add(param,"SeparationForce",0,30,0.1);
+	separationControl.add(param,"SeparationDistance",0,1000,1);
 	//separationControl.add(param,"SeparationAngle",0,180,1);
 	separationControl.open();
 
 
 	let alignmentControl = gui.addFolder("Alignment");
-	alignmentControl.add(param,"AlignmentForce",0,300,0.1);
-	alignmentControl.add(param,"AlignmentDistance",0,2000,1);
+	alignmentControl.add(param,"AlignmentForce",0,30,0.1);
+	alignmentControl.add(param,"AlignmentDistance",0,1000,1);
 	//alignmentControl.add(param,"AlignmentAngle",0,180,1);
 	alignmentControl.open();
 
@@ -90,20 +89,13 @@ function setup(){
 
 }
 
-let ttmp = [];
 function init(){
 
 	n = param.N;
 
 	for(let i = 0 ; i < n; ++i){
-		pos[i] = createVector(random(-windowWidth/3,windowWidth/3),random(-windowWidth/3,windowWidth/3),random(-windowWidth/3,windowWidth/3));
-		vel[i] = createVector(random(-1000,1000),random(-1000,1000),random(-1000,1000));
-		ttmp[i] = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed));
+		boids[i] = new boid();
 	}
-
-	console.log(ttmp);
-	console.log(vel);
-
 }
 
 function windowResized() {
@@ -122,14 +114,7 @@ function draw(){
 
 function drawBoids(){
 	for(let i = 0 ; i < n ; ++i){
-		push();
-		translate(pos[i].x,pos[i].y,pos[i].z);
-		ambientMaterial(param.color);
-		noStroke();
-		sphere(10);
-		//Coneの向きの計算(3次元極座標)
-		
-		pop();
+		boids[i].drawBody();
 	}
 }
 
@@ -149,14 +134,14 @@ function updateBoids(){
 		let alignment = [];
 		//click = [];
 
-		let pos1 = pos[i];
-		let vel1 = vel[i];
+		let pos1 = boids[i].copyPosition();
+		let vel1 = boids[i].copyVelocity();
 		
 		//候補抜粋 
 		for(let j = 0; j < n ; ++j){
 
-			let pos2 = pos[j];
-			let vel2 = vel[j];
+			let pos2 = boids[j].copyPosition();
+			let vel2 = boids[j].copyVelocity();
 			
 			let distance = pos1.dist(pos2);
 			//let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
@@ -202,7 +187,7 @@ function updateBoids(){
 			for(let i = 0 ; i < separation.length ; ++i){
 				separationForceVector.add(separation[i]);
 			}
-			separationForceVector.mult(param.Separation);
+			separationForceVector.mult(param.SeparationForce);
 			tmpForce[i].add(separationForceVector);
 		}
 
@@ -219,25 +204,65 @@ function updateBoids(){
 
 			
 		}
-		
+
+		//CenterForce
+		let centerAttractForceVector = createVector(0,0,0);
+		centerAttractForceVector.add(pos1);
+		centerAttractForceVector.mult(pos1.mag()-windowWidth/3).mult(-3).div(pos1.mag());
+		tmpForce[i].add(centerAttractForceVector);
+
 		//Click
 		
 	}
 	
 	for(let i = 0 ; i < n ; ++i){
-		let tmpPos = pos[i];
-		let tmpVel = vel[i].copy();
-
-		tmpVel.add(tmpForce[i].mult(dt));
-		console.log(vel);
-		tmpPos.add(tmpVel.mult(dt));
-
-		/*
-		vel[i].add(tmpForce[i].mult(dt));
-	
-		pos[i].add(tmp.mult(dt));
-		*/
+		boids[i].updatePosition(tmpForce[i]);
+		boids[i].limitVelocity();
 	}
 		
 
+}
+
+class boid {
+	
+	constructor(){
+		this.pos = createVector(random(-windowWidth,windowWidth),random(-windowWidth,windowWidth),random(-windowWidth,windowWidth));
+		this.vel = createVector(random(-param.MaxSpeed,param.MaxSpeed),random(-param.MaxSpeed,param.MaxSpeed),random(-param.MaxSpeed,param.MaxSpeed));
+
+	}
+
+	updatePosition(forceVector){
+		this.vel.add(forceVector.mult(dt));
+		this.pos.add(this.vel.mult(dt));
+	}
+
+	copyPosition(){
+		return this.pos.copy();
+	}
+
+	copyVelocity(){
+		return this.vel.copy();
+	}
+
+	limitVelocity(){
+
+		if(this.vel.mag() < param.minSpeed){
+			this.vel.normalize();
+			this.vel.mult(param.minSpeed);
+		}
+		if(this.vel.mag() > param.MaxSpeed){
+			this.vel.normalize();
+			this.vel.mult(param.MaxSpeed);
+		}
+	}
+
+	drawBody(){
+		push();
+		translate(this.pos.x,this.pos.y,this.pos.z);
+		ambientMaterial(param.color);
+		noStroke();
+		sphere(10);
+		//Coneの向きの計算(3次元極座標)
+		pop();
+	}
 }
