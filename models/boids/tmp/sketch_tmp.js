@@ -137,29 +137,32 @@ function updateBoids(){
 		alignment = [];
 		//click = [];
 
-		posPresent = boids[i].pos;
-		velPresent = boids[i].vel;
+		pos1 = boids[i].pos();
+		vel1 = boids[i].vel();
 
 		//候補抜粋 
 		for(let j = 0; j < boids.length ; ++j){
 
-			distance = posPresent.dist(boids[j].pos);
-			angle = abs(velPresent.angleBetween(p5.Vector.sub(boids[j].pos,boids[i].pos)));
+			pos2 = boids[j].pos;
+			vel2 = boids[j].vel;
+
+			distance = pos1.dist(pos2);
+			angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
 
 			if(i = !j){
 				//Cohesion
 				if(distance <= param.CohesionDistance && angle <= param.CohesionAngle){
-					cohesion.push(boids[j].pos);
+					cohesion.push(pos2);
 				}
 
 				//Separation
 				if(distance <= param.SeparationDistance && angle <= param.SeparationAngle){
-					separation.push(p5.Vector.sub(boids[i].pos,boids[j].pos));
+					separation.push(p5.Vector.sub(pos1,pos2));
 				}
 
 				//Alignment
 				if(distance <= param.AlignmentDistance && angle <= param.AlignmentAngle){
-					alignment.push(boids[j].vel);
+					alignment.push(vel2);
 				}
 
 
@@ -177,7 +180,7 @@ function updateBoids(){
 				cohesionForceVector.add(cohesion[i]);
 			}
 			cohesionForceVector.mult(1/cohesion.length);
-			cohesionForceVector.sub(boids[i].pos);
+			cohesionForceVector.sub(pos1);
 			cohesionForceVector.mult(CohesionForce);
 			tmpForce[i].add(cohesionForceVector);
 		}
@@ -199,7 +202,7 @@ function updateBoids(){
 				alignmentForceVector.add(alignment[i]);
 			}
 			alignmentForceVector.mult(1/alignment.length);
-			alignmentForceVector.sub(boids[i].vel);
+			alignmentForceVector.sub(vel1);
 			alignmentForceVector.mult(AlignmentForce);
 			tmpForce[i].add(alignmentForceVector);
 			
@@ -218,22 +221,29 @@ class boid{
 
 	constructor(){
 
-		this.pos = createVector(random(-windowWidth/2,windowWidth/2),random(-windowHeight/2,windowHeight/2),random((windowHeight+windowWidth)/4));
-		this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
+		this.position = createVector(random(-windowWidth/2,windowWidth/2),random(-windowHeight/2,windowHeight/2),random((windowHeight+windowWidth)/4));
+		this.velocity = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
         //this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
 	}
 
+	pos(){
+		return this.position;
+	}
+
+	vel(){
+		return this.velocity;
+	}
 	updatePosition(v){
 
-		this.vel.add(v.mult(dt));
-		this.pos.add(this.vel.mult(dt));
+		this.velocity.add(v.mult(dt));
+		this.position.add(this.vel.mult(dt));
 
 	}
 
 	drawBody(){
 
 		push();
-		translate(this.pos.x,this.pos.y,this.pos.z);
+		translate(this.position.x,this.position.y,this.position.z);
 		ambientMaterial(param.color);
 		noStroke();
 		sphere(3);
