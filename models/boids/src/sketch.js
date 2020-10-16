@@ -137,8 +137,8 @@ function updateBoids(){
 		alignment = [];
 		//click = [];
 
-		pos1 = boids[i].pos;
-		vel1 = boids[i].vel;
+		pos1 = boids[i].pos();
+		vel1 = boids[i].vel();
 
 		//候補抜粋 
 		for(let j = 0; j < boids.length ; ++j){
@@ -221,22 +221,29 @@ class boid{
 
 	constructor(){
 
-		this.pos = createVector(random(-windowWidth/2,windowWidth/2),random(-windowHeight/2,windowHeight/2),random((windowHeight+windowWidth)/4));
-		this.vel = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
+		this.position = createVector(random(-windowWidth/2,windowWidth/2),random(-windowHeight/2,windowHeight/2),random((windowHeight+windowWidth)/4));
+		this.velocity = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
         //this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
 	}
 
+	pos(){
+		return this.position;
+	}
+
+	vel(){
+		return this.velocity;
+	}
 	updatePosition(v){
 
-		this.vel.add(v.mult(dt));
-		this.pos.add(this.vel.mult(dt));
+		this.velocity.add(v.mult(dt));
+		this.position.add(this.vel.mult(dt));
 
 	}
 
 	drawBody(){
 
 		push();
-		translate(this.pos.x,this.pos.y,this.pos.z);
+		translate(this.position.x,this.position.y,this.position.z);
 		ambientMaterial(param.color);
 		noStroke();
 		sphere(3);
