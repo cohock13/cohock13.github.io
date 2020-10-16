@@ -1,11 +1,3 @@
-\/* Special Thanks
-
-
-
-
-
-
-*/
 
 let easycam,param;
 let boids = [];
