@@ -137,17 +137,17 @@ function updateBoids(){
 		alignment = [];
 		//click = [];
 
-		pos1 = boids[i].pos();
-		vel1 = boids[i].vel();
+		let pos1 = boids[i].pos();
+		let vel1 = boids[i].vel();
 
 		//候補抜粋 
 		for(let j = 0; j < boids.length ; ++j){
 
-			pos2 = boids[j].pos;
-			vel2 = boids[j].vel;
+			let pos2 = boids[j].pos();
+			let vel2 = boids[j].vel();
 
-			distance = pos1.dist(pos2);
-			angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
+			let distance = pos1.dist(pos2);
+			let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
 
 			if(i = !j){
 				//Cohesion
@@ -212,7 +212,7 @@ function updateBoids(){
 	}
 
 	for(let i = 0 ; i < boids.length ; ++i){
-		boids[i].updatePosition();
+		boids[i].updatePosition(tmpForce[i]);
 	}
 
 }
@@ -226,7 +226,7 @@ class boid{
         //this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
 	}
 
-	pos(){
+	p5.Vector pos(){
 		return this.position;
 	}
 
