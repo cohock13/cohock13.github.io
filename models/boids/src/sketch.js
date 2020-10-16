@@ -1,12 +1,9 @@
-<<<<<<< HEAD
 /* Special Thanks
 https://p5js.org/reference/#content
 
 https://www.dynamicmath.xyz/#about
 
 */
-=======
->>>>>>> 9f0ce0056144d6d50da6c3f5f8beaeb44f943d3d
 
 let easycam,param;
 let boids = [];
