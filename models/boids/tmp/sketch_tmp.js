@@ -1,9 +1,7 @@
 /* Special Thanks
+https://p5js.org/reference/#content
 
-
-
-
-
+https://www.dynamicmath.xyz/#about
 
 */
 
@@ -21,22 +19,22 @@ function parameters(){
 
 	this.N = 100;
 	this.minSpeed = 500;
-	this.MaxSpeed = 1500;
+	this.maxSpeed = 1500;
 	
-	this.CohesionForce = 3;
-	this.CohesionDistance = 300;
-	this.CohesionAngle = 120;
+	this.cohesionForce = 5;
+	this.cohesionDistance = 700;
+	this.cohesionAngle = 120;
 
-	this.SeparationForce = 3;
-	this.SeparationDistance = 400;
-	this.SeparationAngle = 120;
+	this.separationForce = 3;
+	this.separationDistance = 150;
+	this.separationAngle = 120;
 
-	this.AlignmentForce = 3;
-	this.AlignmentDistance = 500;
-	this.AlignmentAngle = 120;
+	this.alignmentForce = 5;
+	this.alignmentDistance = 600;
+	this.alignmentAngle = 120;
 
-	this.CenterAttractMode = true;
-	this.CenterAttractForce = 3;
+	this.centerAttractMode = true;
+	this.centerAttractForce = 3;
 
 	this.Reset = function(){
 		init();
@@ -62,31 +60,31 @@ function setup(){
 
 	gui.addColor(param,"color");
 	gui.add(param,"N",5,500,1);
-	gui.add(param,"MaxSpeed",1000,2000,10);
+	gui.add(param,"maxSpeed",1000,2000,10);
 	gui.add(param,"minSpeed",0,1000,10);
 
 	let cohesionControl = gui.addFolder("Cohesion");
-	cohesionControl.add(param,"CohesionForce",0,30,0.1);
-	cohesionControl.add(param,"CohesionDistance",0,1000,1);
-	cohesionControl.add(param,"CohesionAngle",0,180,1);
+	cohesionControl.add(param,"cohesionForce",0,30,0.1).name("Force");
+	cohesionControl.add(param,"cohesionDistance",0,1000,1).name("Distance");
+	cohesionControl.add(param,"cohesionAngle",0,180,1).name("Angle");
 	cohesionControl.open();
 
 	let separationControl = gui.addFolder("Separation");
-	separationControl.add(param,"SeparationForce",0,30,0.1);
-	separationControl.add(param,"SeparationDistance",0,1000,1);
-	separationControl.add(param,"SeparationAngle",0,180,1);
+	separationControl.add(param,"separationForce",0,30,0.1).name("Force");
+	separationControl.add(param,"separationDistance",0,1000,1).name("Distance");
+	separationControl.add(param,"separationAngle",0,180,1).name("Angle");
 	separationControl.open();
 
 
 	let alignmentControl = gui.addFolder("Alignment");
-	alignmentControl.add(param,"AlignmentForce",0,30,0.1);
-	alignmentControl.add(param,"AlignmentDistance",0,1000,1);
-	alignmentControl.add(param,"AlignmentAngle",0,180,1);
+	alignmentControl.add(param,"alignmentForce",0,30,0.1).name("Force");
+	alignmentControl.add(param,"alignmentDistance",0,1000,1).name("Distance");
+	alignmentControl.add(param,"alignmentAngle",0,180,1).name("Angle");
 	alignmentControl.open();
 
 	let centerAttractControl = gui.addFolder("CenterAttract");
-	centerAttractControl.add(param,"CenterAttractMode");
-	centerAttractControl.add(param,"CenterAttractForce",0,10,0.1);
+	centerAttractControl.add(param,"centerAttractMode").name("AttractMode");
+	centerAttractControl.add(param,"centerAttractForce",0,10,0.1).name("Force");
 	//centerAttractControl.open();
 
 	gui.add(param,"Reset");
@@ -157,17 +155,17 @@ function updateBoids(){
 				let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
 				
 				//Cohesion
-				if(distance <= param.CohesionDistance && angle <= param.CohesionAngle){
+				if(distance <= param.cohesionDistance && angle <= param.cohesionAngle){
 					cohesion.push(pos2);
 				}
 
 				//Separation
-				if(distance <= param.SeparationDistance && angle <= param.SeparationAngle){
+				if(distance <= param.separationDistance && angle <= param.separationAngle){
 					separation.push(p5.Vector.sub(pos1,pos2));
 				}
 
 				//Alignment
-				if(distance <= param.AlignmentDistance && angle <= param.AlignmentAngle){
+				if(distance <= param.alignmentDistance && angle <= param.alignmentAngle){
 					alignment.push(vel2);
 				}
 				
@@ -185,7 +183,7 @@ function updateBoids(){
 			}
 			cohesionForceVector.mult(1/cohesion.length);
 			cohesionForceVector.sub(pos1);
-			cohesionForceVector.mult(param.CohesionForce);
+			cohesionForceVector.mult(param.cohesionForce);
 			tmpForce[i].add(cohesionForceVector);
 		}
 
@@ -195,7 +193,7 @@ function updateBoids(){
 			for(let i = 0 ; i < separation.length ; ++i){
 				separationForceVector.add(separation[i]);
 			}
-			separationForceVector.mult(param.SeparationForce);
+			separationForceVector.mult(param.separationForce);
 			tmpForce[i].add(separationForceVector);
 		}
 
@@ -207,14 +205,14 @@ function updateBoids(){
 			}
 			alignmentForceVector.mult(1/alignment.length);
 			alignmentForceVector.sub(vel1);
-			alignmentForceVector.mult(param.AlignmentForce);
+			alignmentForceVector.mult(param.alignmentForce);
 			tmpForce[i].add(alignmentForceVector);
 
 			
 		}
 
 		//CenterForce
-		if(param.CenterAttractMode){
+		if(param.centerAttractMode){
 			let centerAttractForceVector = createVector(0,0,0);
 			centerAttractForceVector.add(pos1);
 			centerAttractForceVector.mult(pos1.mag()-windowWidth/3).mult(-3).div(pos1.mag());
@@ -260,9 +258,9 @@ class boid {
 			this.vel.normalize();
 			this.vel.mult(param.minSpeed);
 		}
-		if(this.vel.mag() > param.MaxSpeed){
+		if(this.vel.mag() > param.maxSpeed){
 			this.vel.normalize();
-			this.vel.mult(param.MaxSpeed);
+			this.vel.mult(param.maxSpeed);
 		}
 	}
 
