@@ -143,7 +143,7 @@ function updateBoids(){
 		//候補抜粋 
 		for(let j = 0; j < boids.length ; ++j){
 
-			distance = dist(boids[i].pos.x,boids[i].pos.y,boids[i].pos.z,boids[j].pos.x,boids[j].pos.y,boids[j].pos.z);
+			distance = boids[i].pos.dist(boids[j].pos);
 			angle = abs(boids[i].vel.angleBetween(p5.Vector.sub(boids[j].pos,boids[i].pos)));
 
 			if(i = !j){
