@@ -223,7 +223,7 @@ class boid{
 	constructor(){
 
 		this.position = createVector(random(-windowWidth/2,windowWidth/2),random(-windowHeight/2,windowHeight/2),random((windowHeight+windowWidth)/4));
-		this.velocity = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed))
+		this.velocity = createVector(random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed),random(param.minSpeed,param.MaxSpeed));
         //this.vel = createVector(random(0,0.1),random(0,0.1),random(0,0.1));
 	}
 
