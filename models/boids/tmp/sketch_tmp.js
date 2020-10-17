@@ -7,7 +7,6 @@ https://www.dynamicmath.xyz/#about
 
 let easycam,param;
 let boids = [];
-let tmpForce = [];
 let n;
 
 //刻み幅
@@ -59,7 +58,7 @@ function setup(){
 	let gui = new dat.GUI();
 
 	gui.addColor(param,"color");
-	gui.add(param,"N",5,500,1);
+	gui.add(param,"N",5,1000,1);
 	gui.add(param,"maxSpeed",1000,2000,10);
 	gui.add(param,"minSpeed",0,1000,10);
 
@@ -84,7 +83,7 @@ function setup(){
 
 	let centerAttractControl = gui.addFolder("CenterAttract");
 	centerAttractControl.add(param,"centerAttractMode").name("AttractMode");
-	centerAttractControl.add(param,"centerAttractForce",0,10,0.1).name("Force");
+	centerAttractControl.add(param,"centerAttractForce",0,30,0.1).name("Force");
 	//centerAttractControl.open();
 
 	gui.add(param,"Reset");
@@ -124,15 +123,13 @@ function drawBoids(){
 	}
 }
 
-function updateBoids(){
-	
-	//ねんのため
-	angleMode(DEGREES);
-
+function updateBoids(){	
+	let tmpForce = [];
 	//tmpForceの初期化
 	for(let i = 0; i < n ; ++i){
 		tmpForce[i] = createVector(0,0,0);
 	}
+	
 	for(let i = 0; i < n ; ++i){
 		
 		let cohesion = [];
@@ -142,6 +139,8 @@ function updateBoids(){
 
 		let pos1 = boids[i].copyPosition();
 		let vel1 = boids[i].copyVelocity();
+
+		
 		
 		//候補抜粋 
 		for(let j = 0; j < n ; ++j){
@@ -210,12 +209,12 @@ function updateBoids(){
 
 			
 		}
-
+		
 		//CenterForce
 		if(param.centerAttractMode){
 			let centerAttractForceVector = createVector(0,0,0);
 			centerAttractForceVector.add(pos1);
-			centerAttractForceVector.mult(pos1.mag()-windowWidth/3).mult(-3).div(pos1.mag());
+			centerAttractForceVector.mult(pos1.mag()-windowWidth/6).mult(-3).div(pos1.mag());
 			tmpForce[i].add(centerAttractForceVector);
 		}
 
@@ -223,10 +222,13 @@ function updateBoids(){
 		
 	}
 	
+
 	for(let i = 0 ; i < n ; ++i){
+		//boids[i].updatePosition(tmpForce[i]);
 		boids[i].updatePosition(tmpForce[i]);
 		boids[i].limitVelocity();
 	}
+	
 		
 
 }
@@ -234,12 +236,15 @@ function updateBoids(){
 class boid {
 	
 	constructor(){
+
+		let max = param.maxSpeed;
 		this.pos = createVector(random(-windowWidth,windowWidth),random(-windowWidth,windowWidth),random(-windowWidth,windowWidth));
-		this.vel = createVector(random(-param.MaxSpeed,param.MaxSpeed),random(-param.MaxSpeed,param.MaxSpeed),random(-param.MaxSpeed,param.MaxSpeed));
+		this.vel = createVector(random(-max,max),random(-max,max),random(-max,max));
 
 	}
 
 	updatePosition(forceVector){
+		console.log(this.vel);
 		this.vel.add(forceVector.mult(dt));
 		this.pos.add(this.vel.mult(dt));
 	}
@@ -267,10 +272,18 @@ class boid {
 	drawBody(){
 		push();
 		translate(this.pos.x,this.pos.y,this.pos.z);
-		ambientMaterial(param.color);
-		noStroke();
-		sphere(10);
-		//Coneの向きの計算(3次元極座標)
+		fill(param.color);
+		//向きの計算(3次元極座標)
+		let angleY = atan2(this.vel.x,this.vel.z)+90;
+		let angleZ = atan2(this.vel.y,this.vel.x)+90;
+		rotateZ(angleZ);
+		rotateY(angleY);
+		//cone(10,30);
+		beginShape(TRIANGLES);
+		vertex(0,-20*2,0);
+		vertex(-20,20*2,0);
+		vertex(20,20*2,0);
+		endShape();
 		pop();
 	}
 }
