@@ -59,13 +59,10 @@ function setup(){
 
 	gui.addColor(param,"color");
 	gui.add(param,"N",5,500,1);
-<<<<<<< HEAD
 	gui.add(param,"maxSpeed",1500,3000,10);
 	gui.add(param,"minSpeed",0,1500,10);
-=======
 	gui.add(param,"maxSpeed",1000,2000,10);
 	gui.add(param,"minSpeed",0,1000,10);
->>>>>>> eed80007127490faf1906549b474b72b6398229c
 
 	let cohesionControl = gui.addFolder("Cohesion");
 	cohesionControl.add(param,"cohesionForce",0,30,0.1).name("Force");
