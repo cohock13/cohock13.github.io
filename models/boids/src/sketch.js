@@ -58,7 +58,7 @@ function setup(){
 	let gui = new dat.GUI();
 
 	gui.addColor(param,"color");
-	gui.add(param,"N",5,1000,1);
+	gui.add(param,"N",5,500,1);
 	gui.add(param,"maxSpeed",1000,2000,10);
 	gui.add(param,"minSpeed",0,1000,10);
 
