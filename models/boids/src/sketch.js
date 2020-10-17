@@ -17,19 +17,19 @@ function parameters(){
 	this.color = "rgb(27,232,100)";
 
 	this.N = 100;
-	this.minSpeed = 500;
+	this.minSpeed = 1000;
 	this.maxSpeed = 2000;
 	
 	this.cohesionForce = 5;
-	this.cohesionDistance = 700;
+	this.cohesionDistance = 500;
 	this.cohesionAngle = 120;
 
 	this.separationForce = 3;
-	this.separationDistance = 150;
+	this.separationDistance = 300;
 	this.separationAngle = 120;
 
-	this.alignmentForce = 5;
-	this.alignmentDistance = 600;
+	this.alignmentForce = 10;
+	this.alignmentDistance = 300;
 	this.alignmentAngle = 120;
 
 	this.centerAttractMode = true;
