@@ -18,7 +18,7 @@ function parameters(){
 
 	this.N = 100;
 	this.minSpeed = 500;
-	this.maxSpeed = 1500;
+	this.maxSpeed = 2000;
 	
 	this.cohesionForce = 5;
 	this.cohesionDistance = 700;
@@ -58,9 +58,9 @@ function setup(){
 	let gui = new dat.GUI();
 
 	gui.addColor(param,"color");
-	gui.add(param,"N",5,1000,1);
-	gui.add(param,"maxSpeed",1000,2000,10);
-	gui.add(param,"minSpeed",0,1000,10);
+	gui.add(param,"N",5,500,1);
+	gui.add(param,"maxSpeed",1500,3000,10);
+	gui.add(param,"minSpeed",0,1500,10);
 
 	let cohesionControl = gui.addFolder("Cohesion");
 	cohesionControl.add(param,"cohesionForce",0,30,0.1).name("Force");
