@@ -244,7 +244,7 @@ class boid {
 	}
 
 	updatePosition(forceVector){
-		console.log(this.vel);
+		//console.log(this.vel);
 		this.vel.add(forceVector.mult(dt));
 		this.pos.add(this.vel.mult(dt));
 	}
