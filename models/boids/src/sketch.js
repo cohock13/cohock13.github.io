@@ -21,11 +21,11 @@ function parameters(){
 	this.maxSpeed = 2000;
 	
 	this.cohesionForce = 5;
-	this.cohesionDistance = 700;
+	this.cohesionDistance = 300;
 	this.cohesionAngle = 120;
 
-	this.separationForce = 3;
-	this.separationDistance = 150;
+	this.separationForce = 5;
+	this.separationDistance = 500;
 	this.separationAngle = 120;
 
 	this.alignmentForce = 5;
@@ -59,13 +59,10 @@ function setup(){
 
 	gui.addColor(param,"color");
 	gui.add(param,"N",5,500,1);
-<<<<<<< HEAD
 	gui.add(param,"maxSpeed",1500,3000,10);
 	gui.add(param,"minSpeed",0,1500,10);
-=======
 	gui.add(param,"maxSpeed",1000,2000,10);
 	gui.add(param,"minSpeed",0,1000,10);
->>>>>>> eed80007127490faf1906549b474b72b6398229c
 
 	let cohesionControl = gui.addFolder("Cohesion");
 	cohesionControl.add(param,"cohesionForce",0,30,0.1).name("Force");
@@ -195,7 +192,9 @@ function updateBoids(){
 		if(separation.length > 0){
 			let separationForceVector = createVector(0,0,0);
 			for(let i = 0 ; i < separation.length ; ++i){
-				separationForceVector.add(separation[i]);
+				let tmp = 10/separation[i].mag();
+				let hoge = separation[i].mult(tmp);
+				separationForceVector.add(hoge);
 			}
 			separationForceVector.mult(param.separationForce);
 			tmpForce[i].add(separationForceVector);
