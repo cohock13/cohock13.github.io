@@ -21,19 +21,18 @@ function parameters(){
 	this.maxSpeed = 2000;
 	
 	this.cohesionForce = 5;
-<<<<<<< HEAD
+
 	this.cohesionDistance = 300;
 	this.cohesionAngle = 120;
 
 	this.separationForce = 5;
 	this.separationDistance = 500;
-=======
+
 	this.cohesionDistance = 500;
 	this.cohesionAngle = 120;
 
 	this.separationForce = 3;
 	this.separationDistance = 300;
->>>>>>> b5e68481f91a07dd8ed6e60b4ec706c48c9e3d8e
 	this.separationAngle = 120;
 
 	this.alignmentForce = 10;
@@ -69,13 +68,7 @@ function setup(){
 	gui.add(param,"N",5,500,1);
 	gui.add(param,"maxSpeed",1500,3000,10);
 	gui.add(param,"minSpeed",0,1500,10);
-<<<<<<< HEAD
-	gui.add(param,"maxSpeed",1000,2000,10);
-	gui.add(param,"minSpeed",0,1000,10);
 
-=======
-	
->>>>>>> b5e68481f91a07dd8ed6e60b4ec706c48c9e3d8e
 	let cohesionControl = gui.addFolder("Cohesion");
 	cohesionControl.add(param,"cohesionForce",0,30,0.1).name("Force");
 	cohesionControl.add(param,"cohesionDistance",0,1000,1).name("Distance");
