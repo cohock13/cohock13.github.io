@@ -4,8 +4,8 @@ let xPosition = 0;
 let zPosition = 0;
 
 let speed = 0;
-let deltaSpeed = 0.3;
-let speedThreshold = 0.1;
+let deltaSpeed = 0.2;
+let speedThreshold = 0.03;
 let maxSpeed = 5;
 let minSpeed = -10;
 let speedDeceleration = 0.02;
