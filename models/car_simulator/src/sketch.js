@@ -19,25 +19,23 @@ let cameraZ = 0;
 let cameraMode = "TPP";
 let img;
 let modelData;
+let font;
 //----------------------//
-
 function preload(){
-<<<<<<< HEAD
-    modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
-=======
 
+	font = loadFont("https://cohock13.github.io/models/car_simulator/src/NotoSansCJKjp-Bold.otf")
     modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
 
->>>>>>> 3ecebaad351f6d1abea339d671a887c42ca97f44
 }
 
 function setup(){
 
 	createCanvas(windowWidth,windowHeight*0.99,WEBGL);
 	img = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
+	//modelData = loadModel('car.obj');
 	angleMode(DEGREES);
 	reset();
-
+	
 }
 
 function draw(){
@@ -45,6 +43,7 @@ function draw(){
 	clear();
 	background(3,152,252)
 	setGround();
+	drawTexts();
 
 	// speed and position update
 	updateSpeedsAndPositon();
@@ -68,6 +67,16 @@ function setGround(){
 	texture(img);
 	box(5000,20,5000);
 	pop();
+
+}
+
+function drawTexts(){
+
+	textSize(25);
+	// translate (x/1.5-230,speed+y/1.5-100,z)
+	noStroke();
+	text("操作：WASD or 矢印 / tで三人称視点・fで一人称視点",-width/2+20,-height/2+30);
+	text("FPS:"+round(frameRate()),-width/2+20,-height/2+90);
 
 }
 
@@ -130,10 +139,13 @@ function moveAgent(){
 
 	// draw agent
 	push();
-	translate(xPosition,-10,zPosition);
+	translate(xPosition,-30,zPosition);
+	scale(0.65);
 	rotateY(rotateAngle);
+	rotateX(180);
 	fill(200,50,50);
     stroke(150,50,50);
+	strokeWeight(1);
 	model(modelData);
 	pop();
 
@@ -158,7 +170,7 @@ function moveAgent(){
 		y = -50;
 		z = zPosition;
 		centerX = xPosition + 100*sin(rotateAngle-180);
-		centerY = -30;
+		centerY = -40;
 		centerZ = zPosition + 100*cos(rotateAngle-180);
 		upX = 0;
 		upY = 1;
@@ -196,5 +208,3 @@ function reset(){
 	rotateAngle = 0;
 
 }
-
-
