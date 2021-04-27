@@ -2,10 +2,10 @@ let modelData;
 let camera;
 let img;
 function preload(){
-    modelData = loadModel('http://cohock13.github.io/models/3dtest/car.obj',true);
+    modelData = loadModel('https://cohock13.github.io/models/3dtest/car.obj',true);
 }
 function setup(){
-    img = loadImage("http://cohock13.github.io/models/3dtest/color.PNG");
+    img = loadImage("https://cohock13.github.io/models/3dtest/color.PNG");
     createCanvas(windowWidth*0.9,windowHeight*0.9,WEBGL);
     camera = createEasyCam();
 
