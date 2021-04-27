@@ -24,7 +24,7 @@ let modelData;
 function setup(){
 
 	createCanvas(windowWidth*0.9,windowHeight*0.9,WEBGL);
-	img = loadImage('map.png');
+	img = loadImage('/models/car_simulator/src/map.png');
 	//modelData = loadModel('car.obj');
 	angleMode(DEGREES);
 	reset();
