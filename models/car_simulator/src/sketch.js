@@ -23,7 +23,6 @@ let font;
 //----------------------//
 function preload(){
 
-	font = loadFont("https://cohock13.github.io/models/car_simulator/src/NotoSansCJKjp-Bold.otf")
     modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
 
 }
@@ -43,7 +42,7 @@ function draw(){
 	clear();
 	background(3,152,252)
 	setGround();
-	drawTexts();
+	//drawTexts();
 
 	// speed and position update
 	updateSpeedsAndPositon();
@@ -68,17 +67,6 @@ function setGround(){
 	box(5000,20,5000);
 	pop();
 
-}
-
-function drawTexts(){
-	
-	push();
-	textSize(25);
-	// translate (x/1.5-230,speed+y/1.5-100,z)
-	noStroke();
-	text("操作：WASD or 矢印 / tで三人称視点・fで一人称視点",-width/2+20,-height/2+30);
-	text("FPS:"+round(frameRate()),-width/2+20,-height/2+90);
-	pop();
 }
 
 
