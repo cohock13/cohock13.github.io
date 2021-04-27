@@ -22,17 +22,13 @@ let modelData;
 //----------------------//
 
 function preload(){
-<<<<<<< HEAD
     modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
-=======
-    modelData = loadModel('https://cohock13.github.io/models/3dtest/car.obj',true);
->>>>>>> 6544c86b61e365e3e3c5540765a1ce156c7b331b
 }
 
 function setup(){
 
 	createCanvas(windowWidth,windowHeight*0.99,WEBGL);
-	img = loadImage('/models/car_simulator/src/map.png');
+	img = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
 	angleMode(DEGREES);
 	reset();
 
