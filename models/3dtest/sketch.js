@@ -7,10 +7,11 @@ function preload(){
 function setup(){
 
 	createCanvas(windowWidth*0.9,windowHeight*0.9,WEBGL);
-    camera = createEasyCam({distance:windowWidth});
+    camera = createEasyCam();
 
 }
 
 function draw(){
+    clear();
     model(modelData);
 }
