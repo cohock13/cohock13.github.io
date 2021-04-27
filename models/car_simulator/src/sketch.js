@@ -21,11 +21,14 @@ let img;
 let modelData;
 //----------------------//
 
+function preload(){
+    modelData = loadModel('http://cohock13.github.io/models/3dtest/car.obj',true);
+}
+
 function setup(){
 
-	createCanvas(windowWidth*0.9,windowHeight*0.9,WEBGL);
+	createCanvas(windowWidth*0.95,windowHeight*0.95,WEBGL);
 	img = loadImage('/models/car_simulator/src/map.png');
-	//modelData = loadModel('car.obj');
 	angleMode(DEGREES);
 	reset();
 
@@ -123,10 +126,9 @@ function moveAgent(){
 	push();
 	translate(xPosition,-10,zPosition);
 	rotateY(rotateAngle);
-	fill("blue");
-	strokeWeight(1);
-	box(30);
-	//model(modelData);
+    fill(210,0,0);
+    stroke(180,0,0);
+	model(modelData);
 	pop();
 
 	// set camera
