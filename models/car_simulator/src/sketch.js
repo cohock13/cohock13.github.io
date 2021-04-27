@@ -6,7 +6,7 @@ let zPosition = 0;
 let speed = 0;
 let deltaSpeed = 0.3;
 let speedThreshold = 0.1;
-let maxSpeed = 7;
+let maxSpeed = 10;
 let minSpeed = -7;
 let speedDeceleration = 0.1;
 let rotateAngle = 0;
@@ -16,6 +16,7 @@ let cameraX = 0;
 let cameraY = 0;
 let cameraZ = 0;
 
+let cameraMode = "TPP";
 let img;
 let modelData;
 //----------------------//
@@ -23,8 +24,8 @@ let modelData;
 function setup(){
 
 	createCanvas(windowWidth*0.9,windowHeight*0.9,WEBGL);
-	img = loadImage('/models/car_simulator/src/map.png');
-	//modelData = loadModel('/models/car_simulator/src/car.obj');
+	img = loadImage('map.png');
+	//modelData = loadModel('car.obj');
 	angleMode(DEGREES);
 	reset();
 
@@ -123,20 +124,40 @@ function moveAgent(){
 	translate(xPosition,-10,zPosition);
 	rotateY(rotateAngle);
 	fill("blue");
+	strokeWeight(1);
 	box(30);
-
 	//model(modelData);
 	pop();
 
 	// set camera
-	let x = xPosition - 300*sin(rotateAngle-180); 
-	let y = -120;
-	let z = zPosition - 300*cos(rotateAngle-180);
-	let xx = xPosition;
-	let yy = -30;
-	let zz = zPosition;
 
-	camera(x,y,z,xx,yy,zz, 0, 1, 0);
+
+	let x,y,z,centerX,centerY,centerZ,upX,upY,upZ;
+
+	if(cameraMode === "TPP"){
+		x = xPosition - 300*sin(rotateAngle-180); 
+		y = -120;
+		z = zPosition - 300*cos(rotateAngle-180);
+		centerX = xPosition;
+		centerY = -30;
+		centerZ	= zPosition;
+		upX = 0;
+		upY = 1;
+		upZ = 0;
+	}
+	else{
+		x = xPosition; 
+		y = -50;
+		z = zPosition;
+		centerX = xPosition + 100*sin(rotateAngle-180);
+		centerY = -30;
+		centerZ = zPosition + 100*cos(rotateAngle-180);
+		upX = 0;
+		upY = 1;
+		upZ = 0;
+	}
+
+	camera(x,y,z,centerX,centerY,centerZ, upX, upY, upZ);
 
 }
 
@@ -150,11 +171,11 @@ function keyTyped(){
 
 	else if(key === "t"){
 		// third person
-		changeCameraView("TPP");
+		cameraMode = "TPP";
 	}
 	else if(key === "f"){
 		// first person 
-		changeCameraView("FPP");
+		cameraMode = "FPP";
 	}
 }
 
@@ -168,15 +189,4 @@ function reset(){
 
 }
 
-// change camera view
-// キャリブレーションの設定をここでする
-function changeCameraView(style){
-	if(style === "TPP"){
-		
-		
-	}
-	else{
-
-	}
-}
 

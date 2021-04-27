@@ -2,12 +2,11 @@ let modelData;
 let camera;
 
 function preload(){
-    modelData = loadModel('/models/3dtest/car.obj');
+    modelData = loadModel('/models/3dtest/car.obj',true);
 }
 function setup(){
 
 	createCanvas(windowWidth*0.9,windowHeight*0.9,WEBGL);
-    camera = createEasyCam();
 
 }
 
