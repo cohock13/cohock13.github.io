@@ -22,7 +22,7 @@ let modelData;
 //----------------------//
 
 function preload(){
-    modelData = loadModel('http://cohock13.github.io/models/3dtest/car.obj',true);
+    modelData = loadModel('https://cohock13.github.io/models/3dtest/car.obj',true);
 }
 
 function setup(){
