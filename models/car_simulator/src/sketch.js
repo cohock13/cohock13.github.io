@@ -71,13 +71,14 @@ function setGround(){
 }
 
 function drawTexts(){
-
+	
+	push();
 	textSize(25);
 	// translate (x/1.5-230,speed+y/1.5-100,z)
 	noStroke();
 	text("操作：WASD or 矢印 / tで三人称視点・fで一人称視点",-width/2+20,-height/2+30);
 	text("FPS:"+round(frameRate()),-width/2+20,-height/2+90);
-
+	pop();
 }
 
 
