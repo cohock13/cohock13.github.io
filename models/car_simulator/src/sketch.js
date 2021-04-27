@@ -7,7 +7,7 @@ let speed = 0;
 let deltaSpeed = 0.3;
 let speedThreshold = 0.1;
 let maxSpeed = 15;
-let minSpeed = -7;
+let minSpeed = -5;
 let speedDeceleration = 0.02;
 let rotateAngle = 0;
 let deltaRotateAngle = 1.5;
@@ -98,7 +98,7 @@ function updateSpeedsAndPositon(){
 
 	// go backward by "s" or down_arrow
 	if(keyIsDown(83) || keyIsDown(40)){
-		speed += 0.3*deltaSpeed;
+		speed += 0.2*deltaSpeed;
 	}
 
 	// rotate right by "d" or right_arrow
