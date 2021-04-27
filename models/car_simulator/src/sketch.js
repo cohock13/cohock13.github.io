@@ -10,7 +10,7 @@ let maxSpeed = 5;
 let minSpeed = -10;
 let speedDeceleration = 0.02;
 let rotateAngle = 0;
-let deltaRotateAngle = 0.5;
+let deltaRotateAngle = 1;
 
 let cameraX = 0;
 let cameraY = 0;
