@@ -22,12 +22,12 @@ let modelData;
 //----------------------//
 
 function preload(){
-    modelData = loadModel('http://cohock13.github.io/models/3dtest/car.obj',true);
+    modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
 }
 
 function setup(){
 
-	createCanvas(windowWidth*0.95,windowHeight*0.95,WEBGL);
+	createCanvas(windowWidth,windowHeight*0.99,WEBGL);
 	img = loadImage('/models/car_simulator/src/map.png');
 	angleMode(DEGREES);
 	reset();
@@ -126,8 +126,8 @@ function moveAgent(){
 	push();
 	translate(xPosition,-10,zPosition);
 	rotateY(rotateAngle);
-    fill(210,0,0);
-    stroke(180,0,0);
+	fill(200,50,50);
+    stroke(150,50,50);
 	model(modelData);
 	pop();
 
