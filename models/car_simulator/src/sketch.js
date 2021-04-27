@@ -22,7 +22,13 @@ let modelData;
 //----------------------//
 
 function preload(){
+<<<<<<< HEAD
     modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
+=======
+
+    modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
+
+>>>>>>> 3ecebaad351f6d1abea339d671a887c42ca97f44
 }
 
 function setup(){
