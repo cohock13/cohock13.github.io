@@ -2,7 +2,7 @@ let modelData;
 let camera;
 let img;
 function preload(){
-    modelData = loadModel('/models/3dtest/car.obj');
+    modelData = loadModel('/models/3dtest/car.obj',true);
 }
 function setup(){
 
