@@ -6,9 +6,9 @@ let zPosition = 0;
 let speed = 0;
 let deltaSpeed = 0.3;
 let speedThreshold = 0.1;
-let maxSpeed = 10;
+let maxSpeed = 15;
 let minSpeed = -7;
-let speedDeceleration = 0.1;
+let speedDeceleration = 0.02;
 let rotateAngle = 0;
 let deltaRotateAngle = 1.5;
 
