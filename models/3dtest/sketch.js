@@ -13,5 +13,6 @@ function setup(){
 
 function draw(){
     clear();
+    background(65);
     model(modelData);
 }
