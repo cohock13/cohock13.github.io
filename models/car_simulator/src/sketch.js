@@ -98,7 +98,7 @@ function updateSpeedsAndPositon(){
 
 	// go backward by "s" or down_arrow
 	if(keyIsDown(83) || keyIsDown(40)){
-		speed += 0.4*deltaSpeed;
+		speed += 0.*deltaSpeed;
 	}
 
 	// rotate right by "d" or right_arrow
