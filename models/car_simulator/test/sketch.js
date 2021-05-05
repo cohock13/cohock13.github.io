@@ -1,7 +1,7 @@
 //----- parameters -----//
 
 function parameters(){
-	this.deltaSpeed = 0.3;
+	this.deltaSpeed = 0.1;
 	this.maxSpeed = 10;
 	this.speedDeceleration = 0.05;
 	this.deltaRotationAngle = 1.1;
@@ -73,7 +73,7 @@ function setup(){
 	let gui = new dat.GUI();
 
 	let vehicleParameterGUI = gui.addFolder("Speed Parameter");
-	vehicleParameterGUI.add(param,"deltaSpeed",0,1,0.01).name("Acceleration");
+	vehicleParameterGUI.add(param,"deltaSpeed",0,0.3,0.01).name("Acceleration").listen();
 	vehicleParameterGUI.add(param,"speedDeceleration",0,0.2,0.01).name("Friction");
 	vehicleParameterGUI.add(param,"maxSpeed",0,20,0.1).name("Max Speed");
 	vehicleParameterGUI.open();
@@ -154,13 +154,26 @@ function updateSpeedsAndPositon(){
 	speed = constrain(speed,-param.maxSpeed,param.maxSpeed);
 
 
-	// go forward by "w" or up_arrow
-	if(keyIsDown(87) || keyIsDown(38)){
+
+	// speed adjustment by up/down arrow
+	if(keyIsDown(38)){
+		param.deltaSpeed += 0.001;
+	}
+
+	if(keyIsDown(40)){
+		param.deltaSpeed -= 0.001;
+	}
+
+	param.deltaSpeed = constrain(param.deltaSpeed,0,0.3);
+
+
+	// go forward by "w" 
+	if(keyIsDown(87)){
 		speed -= param.deltaSpeed;
 	}
 
-	// go backward by "s" or down_arrow
-	if(keyIsDown(83) || keyIsDown(40)){
+	// go backward by "s" 
+	if(keyIsDown(83)){
 		speed += 0.4*param.deltaSpeed;
 	}
 
