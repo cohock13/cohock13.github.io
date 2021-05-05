@@ -8,8 +8,8 @@ function parameters(){
 	this.deltaRotationAngle = 1.5
 }
 
-let xPosition = 0;
-let zPosition = 0;
+let xPosition;
+let zPosition;
 
 let speed = 0;
 let rotateAngle = 0;
@@ -22,7 +22,7 @@ let cameraZ = 0;
 
 let isCameraTPP = true;
 let param;
-let img;
+
 let carModelData;
 let houseModel_1;
 let houseModel_2;
@@ -30,11 +30,19 @@ let houseModel_3;
 let buildingModel_1;
 let buildingModel_2;
 let buildingModel_3;
+let buildingModel_4;
+let lampModel;
+
+let roadTexture;
+let texture_1;
+let texture_2;
+let texture_3;
 let font;
 //----------------------//
 function preload(){
 
 	font = loadFont("https://cohock13.github.io/models/car_simulator/src/NotoSansCJKjp-Bold.otf");
+
     carModelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
 	houseModel_1 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_1.obj");
 	houseModel_2 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_2.obj");
@@ -42,19 +50,26 @@ function preload(){
 	buildingModel_1 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_1.obj");
 	buildingModel_2 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_2.obj");
 	buildingModel_3 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_3.obj");
+	buildingModel_4 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_4.obj");
+	lampModel = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/streetlamp.obj");
 
 }
 
 function setup(){
 
-	createCanvas(windowWidth,windowHeight*0.99,WEBGL);
-	//img = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
-	img = loadImage('https://cohock13.github.io/models/car_simulator/test/map_2.png');
+	createCanvas(windowWidth,windowHeight*0.95,WEBGL);
+
+	//roadTexture = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
+	roadTexture= loadImage('https://cohock13.github.io/models/car_simulator/test/map_2.png');
+	texture_1 = loadImage('https://cohock13.github.io/models/car_simulator/test/obj/textures/1.jpg');
+	texture_2 = loadImage('https://cohock13.github.io/models/car_simulator/test/obj/textures/2.jpg');
+	texture_3 = loadImage('https://cohock13.github.io/models/car_simulator/test/obj/textures/3.jpg');
+
 	textFont(font);
 	angleMode(DEGREES);
 	reset();
 
-	//GUI関連
+	// ----------------------- GUI Settings ---------------------------------------
 	param = new parameters();
 	let gui = new dat.GUI();
 
@@ -70,6 +85,7 @@ function setup(){
 	wheelParameter.open();
 
 	gui.open();
+    //------- --------------------------------------------------------------------
 	
 }
 
@@ -78,7 +94,7 @@ function draw(){
 	//clear();
 	background(3,152,252)
 	setGround();
-	drawTexts();
+	//drawTexts();
 
 	// speed and position update
 	updateSpeedsAndPositon();
@@ -99,7 +115,7 @@ function setGround(){
 	push();
 	translate(0,15,0);
 	fill(color(65));
-	texture(img);
+	texture(roadTexture);
 	box(5000,20,5000);
 	pop();
 
@@ -169,30 +185,46 @@ function updateSpeedsAndPositon(){
 function drawObjects(){
 
 	// house 1 
-		
+	setObjectAndCollisionDetection(houseModel_1,2.2,texture_1,0,1600,1600,0,0);
 
 	// house 2
-
+	setObjectAndCollisionDetection(houseModel_2,50,texture_2,0,-1400,0,0,0);
 
 	// house 3
 
 
 	// building 1
-
+	setObjectAndCollisionDetection(buildingModel_1,45,texture_1,0,0,-1500,0,0);
 
 
 	// building 2
-
+	setObjectAndCollisionDetection(buildingModel_2,45,texture_2,0,1500,-1500,0,0);
 
 	// building 3
+	setObjectAndCollisionDetection(buildingModel_3,45,texture_3,0,-1500,1500,0,0);
 
-
-	//
-
+	// building 4
+	setObjectAndCollisionDetection(buildingModel_4,45,texture_3,0,0,0,0,0);
 
 }
 
-function set
+function setObjectAndCollisionDetection(model_,scale_,texture_,height,centerX,centerZ,widthX,widthZ){
+
+	// model set
+	push();
+	translate(centerX,-height,centerZ);
+	texture(texture_)
+	rotateX(180);
+	strokeWeight(1);
+	stroke(150,150,150);
+	scale(scale_);
+	model(model_);
+	pop();
+
+	// collision detection
+
+}
+
 
 // update agent and camera
 function moveAgent(){
@@ -259,8 +291,8 @@ function keyTyped(){
 // reset agent's position, velocity (and position of camera)
 function reset(){
 
-	xPosition = 0;
-	zPosition = 0;
+	xPosition = -800;
+	zPosition = 1900;
 	speed = 0;
 	rotateAngle = 0;
 
