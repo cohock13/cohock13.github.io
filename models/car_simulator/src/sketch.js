@@ -4,13 +4,13 @@ let xPosition = 0;
 let zPosition = 0;
 
 let speed = 0;
-let deltaSpeed = 0.3;
-let speedThreshold = 0.1;
-let maxSpeed = 10;
-let minSpeed = -7;
-let speedDeceleration = 0.1;
+let deltaSpeed = 0.1;
+let speedThreshold = 0.05;
+let maxSpeed = 5;
+let minSpeed = -10;
+let speedDeceleration = 0.02;
 let rotateAngle = 0;
-let deltaRotateAngle = 1.5;
+let deltaRotateAngle = 1;
 
 let cameraX = 0;
 let cameraY = 0;
@@ -99,7 +99,7 @@ function updateSpeedsAndPositon(){
 
 	// go backward by "s" or down_arrow
 	if(keyIsDown(83) || keyIsDown(40)){
-		speed += deltaSpeed;
+		speed += 0.6*deltaSpeed;
 	}
 
 	// rotate right by "d" or right_arrow
