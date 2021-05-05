@@ -23,13 +23,25 @@ let cameraZ = 0;
 let isCameraTPP = true;
 let param;
 let img;
-let modelData;
+let carModelData;
+let houseModel_1;
+let houseModel_2;
+let houseModel_3;
+let buildingModel_1;
+let buildingModel_2;
+let buildingModel_3;
 let font;
 //----------------------//
 function preload(){
 
 	font = loadFont("https://cohock13.github.io/models/car_simulator/src/NotoSansCJKjp-Bold.otf");
-    modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
+    carModelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
+	houseModel_1 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_1.obj");
+	houseModel_2 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_2.obj");
+	houseModel_3 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_3.obj");
+	buildingModel_1 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_1.obj");
+	buildingModel_2 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_2.obj");
+	buildingModel_3 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_3.obj");
 
 }
 
@@ -37,7 +49,7 @@ function setup(){
 
 	createCanvas(windowWidth,windowHeight*0.99,WEBGL);
 	//img = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
-	img = loadImage("map_2.png");
+	img = loadImage('https://cohock13.github.io/models/car_simulator/test/map_2.png');
 	textFont(font);
 	angleMode(DEGREES);
 	reset();
@@ -156,7 +168,31 @@ function updateSpeedsAndPositon(){
 // draw objects and collision detection(position is updated when collision detected)
 function drawObjects(){
 
+	// house 1 
+		
+
+	// house 2
+
+
+	// house 3
+
+
+	// building 1
+
+
+
+	// building 2
+
+
+	// building 3
+
+
+	//
+
+
 }
+
+function set
 
 // update agent and camera
 function moveAgent(){
@@ -171,7 +207,7 @@ function moveAgent(){
 		fill(200,50,50);
 		stroke(150,50,50);
 		strokeWeight(1);
-		model(modelData);
+		model(carModelData);
 		pop();
 	}
 
