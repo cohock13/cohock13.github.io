@@ -3,9 +3,8 @@
 function parameters(){
 	this.deltaSpeed = 0.3;
 	this.maxSpeed = 10;
-	this.minSpeed = -7;
 	this.speedDeceleration = 0.05;
-	this.deltaRotationAngle = 1.5
+	this.deltaRotationAngle = 1.1;
 }
 
 let xPosition;
@@ -50,7 +49,7 @@ function preload(){
 	buildingModel_1 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_1.obj");
 	buildingModel_2 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_2.obj");
 	buildingModel_3 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_3.obj");
-	buildingModel_4 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_4.obj");
+	//buildingModel_4 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_4.obj");
 	lampModel = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/streetlamp.obj");
 
 }
@@ -73,16 +72,15 @@ function setup(){
 	param = new parameters();
 	let gui = new dat.GUI();
 
-	let vehicleParameter = gui.addFolder("Speed Parameter");
-	vehicleParameter.add(param,"deltaSpeed",0,1,0.01).name("Acceleration");
-	vehicleParameter.add(param,"speedDeceleration",0,0.2,0.01).name("Deceleration");
-	vehicleParameter.add(param,"maxSpeed",0,15,0.1).name("Max Speed");
-	vehicleParameter.add(param,"minSpeed",-15,0,0.1).name("min Speed");
-	vehicleParameter.open();
+	let vehicleParameterGUI = gui.addFolder("Speed Parameter");
+	vehicleParameterGUI.add(param,"deltaSpeed",0,1,0.01).name("Acceleration");
+	vehicleParameterGUI.add(param,"speedDeceleration",0,0.2,0.01).name("Friction");
+	vehicleParameterGUI.add(param,"maxSpeed",0,20,0.1).name("Max Speed");
+	vehicleParameterGUI.open();
 
-	let wheelParameter = gui.addFolder("Angle Paramter");
-	wheelParameter.add(param,"deltaRotationAngle",0,3,0.1).name("Sensitivity");
-	wheelParameter.open();
+	let wheelParameterGUI = gui.addFolder("Angle Paramter");
+	wheelParameterGUI.add(param,"deltaRotationAngle",0,3,0.1).name("Sensitivity");
+	wheelParameterGUI.open();
 
 	gui.open();
     //------- --------------------------------------------------------------------
@@ -153,7 +151,7 @@ function updateSpeedsAndPositon(){
 	}
 
 	// 3. speed has max and min
-	speed = constrain(speed,-param.maxSpeed,-param.minSpeed);
+	speed = constrain(speed,-param.maxSpeed,param.maxSpeed);
 
 
 	// go forward by "w" or up_arrow
@@ -185,37 +183,46 @@ function updateSpeedsAndPositon(){
 function drawObjects(){
 
 	// house 1 
-	setObjectAndCollisionDetection(houseModel_1,2.2,texture_1,0,1600,1600,0,0);
+	setObjectAndCollisionDetection(houseModel_1,2.2,texture_1,1600,1600,0,0);
 
 	// house 2
-	setObjectAndCollisionDetection(houseModel_2,50,texture_2,0,-1400,0,0,0);
+	setObjectAndCollisionDetection(houseModel_2,50,texture_2,-1400,0,0,0);
 
 	// house 3
-
+	setObjectAndCollisionDetection(houseModel_3,70,texture_2,1200,-400,0,0);
 
 	// building 1
-	setObjectAndCollisionDetection(buildingModel_1,45,texture_1,0,0,-1500,0,0);
+	setObjectAndCollisionDetection(buildingModel_1,45,texture_3,0,-1500,0,0);
 
 
 	// building 2
-	setObjectAndCollisionDetection(buildingModel_2,45,texture_2,0,1500,-1500,0,0);
+	setObjectAndCollisionDetection(buildingModel_2,45,texture_2,1500,-1500,0,0);
 
 	// building 3
-	setObjectAndCollisionDetection(buildingModel_3,45,texture_3,0,-1500,1500,0,0);
-
+	setObjectAndCollisionDetection(buildingModel_3,45,texture_3,-1500,1500,0,0);
+	setObjectAndCollisionDetection(buildingModel_3,45,texture_1,0,0,0,0,true);
 	// building 4
-	setObjectAndCollisionDetection(buildingModel_4,45,texture_3,0,0,0,0,0);
+	//setObjectAndCollisionDetection(buildingModel_4,45,texture_3,0,0,0,0);
+
+
+	// lamp
+	setObjectAndCollisionDetection(lampModel,45,texture_3,0,1500,0,0);
+	setObjectAndCollisionDetection(lampModel,45,texture_3,-1500,-1500,0,0);
+
 
 }
 
-function setObjectAndCollisionDetection(model_,scale_,texture_,height,centerX,centerZ,widthX,widthZ){
+function setObjectAndCollisionDetection(model_,scale_,texture_,centerX,centerZ,widthX,widthZ,rotate=false){
 
 	// model set
 	push();
-	translate(centerX,-height,centerZ);
+	translate(centerX,0,centerZ);
 	texture(texture_)
+	if(rotate){
+		rotateY(90);
+	}
 	rotateX(180);
-	strokeWeight(1);
+	strokeWeight(2);
 	stroke(150,150,150);
 	scale(scale_);
 	model(model_);
