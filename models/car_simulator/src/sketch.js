@@ -21,7 +21,10 @@ let img;
 let modelData;
 let font;
 //----------------------//
+<<<<<<< HEAD
 
+=======
+>>>>>>> dcc80e1f2ff31be236584f31050867f5ea2078db
 function preload(){
 
     modelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
@@ -84,7 +87,11 @@ function updateSpeedsAndPositon(){
 	if(speed > 0){
 		speed -= speedDeceleration;
 	}
+<<<<<<< HEAD
 	else if(speed < 0){
+=======
+	else{
+>>>>>>> dcc80e1f2ff31be236584f31050867f5ea2078db
 		speed += speedDeceleration;
 	}
 
@@ -198,7 +205,10 @@ function reset(){
 	rotateAngle = 0;
 
 }
+<<<<<<< HEAD
 
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 }
+=======
+>>>>>>> dcc80e1f2ff31be236584f31050867f5ea2078db
