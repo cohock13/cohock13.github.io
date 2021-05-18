@@ -40,16 +40,8 @@ let font;
 //----------------------//
 function preload(){
 
-	font = loadFont("https://cohock13.github.io/models/car_simulator/src/NotoSansCJKjp-Bold.otf");
-
     carModelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
-	houseModel_1 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_1.obj");
-	houseModel_2 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_2.obj");
-	houseModel_3 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/house_3.obj");
-	buildingModel_1 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_1.obj");
-	buildingModel_2 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_2.obj");
-	buildingModel_3 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_3.obj");
-	//buildingModel_4 = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/building_4.obj");
+
 	lampModel = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/streetlamp.obj");
 
 }
@@ -60,11 +52,7 @@ function setup(){
 
 	//roadTexture = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
 	roadTexture= loadImage('https://cohock13.github.io/models/car_simulator/test/map_2.png');
-	texture_1 = loadImage('https://cohock13.github.io/models/car_simulator/test/obj/textures/1.jpg');
-	texture_2 = loadImage('https://cohock13.github.io/models/car_simulator/test/obj/textures/2.jpg');
-	texture_3 = loadImage('https://cohock13.github.io/models/car_simulator/test/obj/textures/3.jpg');
 
-	textFont(font);
 	angleMode(DEGREES);
 	reset();
 
@@ -78,7 +66,7 @@ function setup(){
 	vehicleParameterGUI.add(param,"maxSpeed",0,20,0.1).name("Max Speed");
 	vehicleParameterGUI.open();
 
-	let wheelParameterGUI = gui.addFolder("Angle Paramter");
+	let wheelParameterGUI = gui.addFolder("Angle Parameter");
 	wheelParameterGUI.add(param,"deltaRotationAngle",0,3,0.1).name("Sensitivity");
 	wheelParameterGUI.open();
 
@@ -92,7 +80,6 @@ function draw(){
 	//clear();
 	background(3,152,252)
 	setGround();
-	//drawTexts();
 
 	// speed and position update
 	updateSpeedsAndPositon();
@@ -104,7 +91,7 @@ function draw(){
 	moveAgent();
 
 	// TBA
-	//events();
+	events();
 
 }
 
@@ -118,20 +105,6 @@ function setGround(){
 	pop();
 
 }
-
-function drawTexts(){
-
-	push();
-	textSize(10);
-	translate(xPosition,-175,zPosition);
-	rotateY(rotateAngle);
-	rotateX(15);
-	text("WASDで移動 / ↑↓でアクセル操作 / cで視点変更 / GUIでパラメータ調整",-310,0);
-	text("FPS:"+round(frameRate()),-310,15);
-	pop();
-
-}
-
 
 // speed update by keypress and position update
 function updateSpeedsAndPositon(){
@@ -154,7 +127,6 @@ function updateSpeedsAndPositon(){
 	speed = constrain(speed,-param.maxSpeed,param.maxSpeed);
 
 
-
 	// speed adjustment by up/down arrow
 	if(keyIsDown(38)){
 		param.deltaSpeed += 0.001;
@@ -164,7 +136,7 @@ function updateSpeedsAndPositon(){
 		param.deltaSpeed -= 0.001;
 	}
 
-	param.deltaSpeed = constrain(param.deltaSpeed,0,0.3);
+	param.deltaSpeed = constrain(param.deltaSpeed,-0.3,0.3);
 
 
 	// go forward by "w" 
@@ -174,7 +146,7 @@ function updateSpeedsAndPositon(){
 
 	// go backward by "s" 
 	if(keyIsDown(83)){
-		speed += 0.4*param.deltaSpeed;
+		speed += param.deltaSpeed;
 	}
 
 	// rotate right by "d" or right_arrow
@@ -195,53 +167,72 @@ function updateSpeedsAndPositon(){
 // draw objects and collision detection(position is updated when collision detected)
 function drawObjects(){
 
-	// house 1 
-	setObjectAndCollisionDetection(houseModel_1,2.2,texture_1,1600,1600,0,0);
-
-	// house 2
-	setObjectAndCollisionDetection(houseModel_2,50,texture_2,-1400,0,0,0);
-
-	// house 3
-	setObjectAndCollisionDetection(houseModel_3,70,texture_2,1200,-400,0,0);
-
-	// building 1
-	setObjectAndCollisionDetection(buildingModel_1,45,texture_3,0,-1500,0,0);
-
-
-	// building 2
-	setObjectAndCollisionDetection(buildingModel_2,45,texture_2,1500,-1500,0,0);
-
-	// building 3
-	setObjectAndCollisionDetection(buildingModel_3,45,texture_3,-1500,1500,0,0);
-	setObjectAndCollisionDetection(buildingModel_3,45,texture_1,0,0,0,0,true);
-	// building 4
-	//setObjectAndCollisionDetection(buildingModel_4,45,texture_3,0,0,0,0);
-
-
 	// lamp
-	setObjectAndCollisionDetection(lampModel,45,texture_3,0,1500,0,0);
-	setObjectAndCollisionDetection(lampModel,45,texture_3,-1500,-1500,0,0);
+	setObjectModel(lampModel,color('rgb(200,200,200)'),45,0,1500,0);
+	setObjectModel(lampModel,color('rgb(200,200,200)'),45,-1500,-1500,0);
+
+	setObjectAndDetectCollision(color('rgb(50,50,50)'),0,0,900,100);
+	setObjectAndDetectCollision(color('rgb(50,50,50)'),1500,1500,900,100);
+	setObjectAndDetectCollision(color('rgb(70,70,70)'),-1500,0,900,100);
+	setObjectAndDetectCollision(color('rgb(60,60,60)'),1500,0,900,100);
+	setObjectAndDetectCollision(color('rgb(60,60,60)'),1500,-1550,900,100);
+	setObjectAndDetectCollision(color('rgb(90,90,90)'),-1500,1500,900,100);
+	setObjectAndDetectCollision(color('rgb(100,100,100)'),0,-1500,900,100);
+
 
 
 }
 
-function setObjectAndCollisionDetection(model_,scale_,texture_,centerX,centerZ,widthX,widthZ,rotate=false){
+function setObjectModel(model_,color_,scale_,centerX,centerZ,height_,rotate=false){
 
-	// model set
+	// model seting
 	push();
-	translate(centerX,0,centerZ);
-	texture(texture_)
+	translate(centerX,height_,centerZ);
+	fill(color_)
 	if(rotate){
-		rotateY(90);
+		rotateY(-90);
 	}
 	rotateX(180);
-	strokeWeight(2);
-	stroke(150,150,150);
+	strokeWeight(1);
+	stroke(50,50,50);
 	scale(scale_);
 	model(model_);
 	pop();
+}
 
-	// collision detection
+function setObjectAndDetectCollision(color_,centerX,centerZ,width_,height_){
+
+	// model setting
+	push();
+	translate(centerX,-height_,centerZ);
+	fill(color_);
+	box(width_);
+	pop();
+
+	//collision detection
+	let delta = 100; 
+	let top = centerZ+width_/2;
+	let down = centerZ-width_/2;
+	let left = centerX-width_/2;
+	let right = centerX+width_/2;
+	
+	//left
+	if(left-delta <= xPosition && xPosition <= left && down <= zPosition && zPosition <= top){
+		xPosition = left-delta;
+	}
+	//right
+	if(right <= xPosition && xPosition <= right+delta && down <= zPosition && zPosition <= top){
+		xPosition = right+delta;
+	}
+	//top
+	if(left <= xPosition && xPosition <= right && top <= zPosition && zPosition <= top+delta){
+		zPosition = top+delta;
+	}
+	//down
+	if(left <= xPosition && xPosition <= right && down-delta <= zPosition && zPosition <= down){
+		zPosition = down-delta;
+	}
+	
 
 }
 
@@ -294,6 +285,25 @@ function moveAgent(){
 
 }
 
+let xStartPosition = -800;
+let zStartPosition = 1100;
+let eventStartFlag = false;
+let eventDoneFlag = false;
+let eventCarPosition = -2000; // default start pos :(-2000,700)
+let eventCarEndPosition = 400; // default end pos : (400,700)
+function events(){
+
+	let startPositionFlag = (xStartPosition-100 <= xPosition && xPosition <= xStartPosition+100 && zStartPosition-100 <= zPosition && zPosition <= zStartPosition+100)
+	// event 1 : car speedruns when you over a line
+	if((startPositionFlag || eventStartFlag) && !eventDoneFlag){
+		setObjectModel(carModelData,color('rgb(50,50,200)'),1.3,eventCarPosition,700,-30,rotate=true);
+		eventCarPosition += 30;
+		eventStartFlag = true;
+	}
+	if(eventCarPosition >= eventCarEndPosition){
+		eventDoneFlag = true;
+	}
+}
 
 // resets when r pressed , change camera view when c pressed
 function keyTyped(){
@@ -315,6 +325,9 @@ function reset(){
 	zPosition = 1900;
 	speed = 0;
 	rotateAngle = 0;
+	eventDoneFlag = false;
+	eventStartFlag = false;
+	eventCarPosition = -2000
 
 }
 
