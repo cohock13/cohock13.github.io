@@ -2,8 +2,9 @@
 
 function parameters(){
 	this.targetVelocity = 0;
-	this.speedDeceleration = 0.05;
-	this.deltaRotationAngle = 1.1;
+	this.speedDeceleration = 0.03;
+	this.rotationVelocity = 0;
+	this.handleMouseMode = false;
 }
 
 let xPosition;
@@ -11,10 +12,13 @@ let zPosition;
 
 let speed = 0;
 let rotateAngle = 0;
-let deltaSpeed = 0.2; // targetVelocity += delta
+let deltaRotationAngle = 0.05;
+let wheelResilience = 0.02;
+let maxRotationVelocity = 1;
+let deltaSpeed = 0.08; // targetVelocity += delta
 let maxSpeed = 15;
 let speedFeedbackGain = 1.2;
-this.speedThreshold = 0.05;
+this.speedThreshold = 0.04;
 
 let cameraX = 0;
 let cameraY = 0;
@@ -56,21 +60,22 @@ function setup(){
 	//roadTexture = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
 	roadTexture= loadImage('https://cohock13.github.io/models/car_simulator/test/map_2.png');
 
+	param = new parameters();
 	angleMode(DEGREES);
 	reset();
 
 	// ----------------------- GUI Settings ---------------------------------------
-	param = new parameters();
+
 	let gui = new dat.GUI();
 
 	let vehicleParameterGUI = gui.addFolder("Speed Parameter");
 	vehicleParameterGUI.add(param,"targetVelocity",0,15,0.2).name("Target Velocity").listen();
 	vehicleParameterGUI.add(param,"speedDeceleration",0,0.2,0.01).name("Friction");
-
 	vehicleParameterGUI.open();
 
 	let wheelParameterGUI = gui.addFolder("Angle Parameter");
-	wheelParameterGUI.add(param,"deltaRotationAngle",0,3,0.1).name("Sensitivity");
+	wheelParameterGUI.add(param,"rotationVelocity",-1,1,0.1).name("Velocity").listen();
+	wheelParameterGUI.add(param,"handleMouseMode").name("Mouse");
 	wheelParameterGUI.open();
 
 	gui.open();
@@ -145,21 +150,31 @@ function updateSpeedsAndPositon(){
 
 	// rotate right by "d" or right_arrow
 	if(keyIsDown(68)||keyIsDown(39)){
-		rotateAngle -= param.deltaRotationAngle;
+		param.rotationVelocity -= deltaRotationAngle;
 	}
 
 	// rotate left by "a" or left_arrow
 	if(keyIsDown(65)||keyIsDown(37)){
-		rotateAngle += param.deltaRotationAngle;
+		param.rotationVelocity += deltaRotationAngle;
 	}
 
-	// inertia force when deceleration
-	if(-speed-param.targetVelocity > 0){
-		speed -= (-speed-param.targetVelocity)**5;
+	// angular resilience
+	if(param.rotationVelocity > 0){
+		param.rotationVelocity -= wheelResilience;
+	}
+	else{
+		param.rotationVelocity += wheelResilience;
 	}
 
+	if(abs(param.rotationVelocity) <= wheelResilience){
+		param.rotationVelocity = 0;
+	}
 
-	speed += speedFeedbackGain*(-speed-param.targetVelocity);
+	//angular constrain
+	param.rotationVelocity = constrain(param.rotationVelocity,-maxRotationVelocity,maxRotationVelocity);
+
+	rotateAngle += param.rotationVelocity;
+	speed += speedFeedbackGain*(-param.targetVelocity-speed);
 
 	xPosition += speed*sin(rotateAngle); 
 	zPosition += speed*cos(rotateAngle);
@@ -327,9 +342,13 @@ function reset(){
 	zPosition = 1900;
 	speed = 0;
 	rotateAngle = 0;
+	param.targetVelocity = 0;
+	//event
 	eventDoneFlag = false;
 	eventStartFlag = false;
 	eventCarPosition = -2000
+
+
 
 }
 
