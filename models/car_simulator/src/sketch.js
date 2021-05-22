@@ -29,7 +29,10 @@ function parameters(){
 
 let time = 0;
 let records = [];
-let recordsIndex = ["time","positionX","positionY","velocityX","velocityY","accelerationX","accelerationY","JarkX","JarkY","angularVelocity"]
+let recordsIndex = ["time","positionX","positionY","velocity(abs)","velocityX","velocityY","acceleration(abs)","accelerationX","accelerationY","Jerk(abs)","JerkX","JerkY","angularVelocity"]
+let tmpVelocityRecord = [0];
+let tmpAccRecord = [0,0];
+let tmpJerkRecord = [0];
 
 let xPosition;
 let zPosition;
@@ -362,8 +365,24 @@ function events(){
 
 // Data Recording
 function recordData(){
+	
+	// time calc
+	let dt = 1/60;
+	time += dt;
 
-	time += 1/60;
+	// acceleration and jerk calc
+	tmpVelocityRecord.push(-speed);
+	
+	let currentAcceleration = (tmpVelocityRecord[1]-tmpVelocityRecord[0])/dt;
+	tmpAccRecord.push(currentAcceleration);
+
+	let currentJerk = (tmpAccRecord[2]-tmpAccRecord[1])/dt;
+	tmpJerkRecord.push(currentJerk);
+
+	tmpVelocityRecord.shift();
+	tmpAccRecord.shift();
+	tmpJerkRecord.shift();
+
 
 	if(param.recording){
 
@@ -376,14 +395,20 @@ function recordData(){
 		data.push(xPosition);
 		data.push(zPosition);
 		// velocity
-		data.push(speed*Math.sin(rotateAngle));
-		data.push(speed*Math.cos(rotateAngle));
+		let tmpSpeed = -speed;
+		data.push(tmpSpeed);
+		data.push(tmpSpeed*Math.sin(rotateAngle));
+		data.push(tmpSpeed*Math.cos(rotateAngle));
 		// acceleration
-		data.push(0);
-		data.push(0);
+		let tmpAcc = tmpAccRecord[1];
+		data.push(tmpAcc);
+		data.push(tmpAcc*Math.sin(rotateAngle));
+		data.push(tmpAcc*Math.cos(rotateAngle));
 		// jerk
-		data.push(0);
-		data.push(0);
+		let tmpJerk = tmpJerkRecord[0];
+		data.push(tmpJerk);
+		data.push(tmpJerk*Math.sin(rotateAngle));
+		data.push(tmpJerk*Math.cos(rotateAngle));
 		//angular velocity
 		data.push(param.rotationVelocity);
 
