@@ -5,7 +5,31 @@ function parameters(){
 	this.speedDeceleration = 0.03;
 	this.rotationVelocity = 0;
 	this.handleMouseMode = false;
+	this.recording = false;
+    this.exportCSV = function(){
+
+        // output 
+
+        let data = records.map((record)=>record.join(',')).join('\r\n');
+         
+        let bom  = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        let blob = new Blob([bom, data], {type: 'text/csv'});
+        let url = (window.URL || window.webkitURL).createObjectURL(blob);
+        let link = document.createElement('a');
+        link.download = 'result.csv';
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        //array reset
+        records = [recordIndex];
+    }
 }
+
+let time = 0;
+let records = [];
+let recordsIndex = ["time","positionX","positionY","velocityX","velocityY","accelerationX","accelerationY","JarkX","JarkY","angularVelocity"]
 
 let xPosition;
 let zPosition;
@@ -56,7 +80,7 @@ function preload(){
 function setup(){
 
 	createCanvas(windowWidth,windowHeight*0.9,WEBGL);
-
+	frameRate(60);
 	//roadTexture = loadImage('https://cohock13.github.io/models/car_simulator/src/map.png');
 	roadTexture= loadImage('https://cohock13.github.io/models/car_simulator/test/map_2.png');
 
@@ -75,8 +99,12 @@ function setup(){
 
 	let wheelParameterGUI = gui.addFolder("Angle Parameter");
 	wheelParameterGUI.add(param,"rotationVelocity",-1,1,0.1).name("Velocity").listen();
-	wheelParameterGUI.add(param,"handleMouseMode").name("Mouse");
 	wheelParameterGUI.open();
+
+	let recordingGUI = gui.addFolder("Data recording");
+	recordingGUI.add(param,"recording").name("Recording");
+	recordingGUI.add(param,"exportCSV").name("Export CSV");
+	recordingGUI.open();
 
 	gui.open();
     //------- --------------------------------------------------------------------
@@ -100,6 +128,9 @@ function draw(){
 
 	// TBA
 	events();
+
+	// Recording Data
+	recordData();
 
 }
 
@@ -175,6 +206,13 @@ function updateSpeedsAndPositon(){
 
 	rotateAngle += param.rotationVelocity;
 	speed += speedFeedbackGain*(-param.targetVelocity-speed);
+
+	/*
+	if(param.handleMouseMode){
+		let w = windowWidth/2;
+		rotateAngle = -180*((mouseX-w)/w);
+	}
+	*/
 
 	xPosition += speed*sin(rotateAngle); 
 	zPosition += speed*cos(rotateAngle);
@@ -322,6 +360,39 @@ function events(){
 	}
 }
 
+// Data Recording
+function recordData(){
+
+	time += 1/60;
+
+	if(param.recording){
+
+		// collection data
+		let data = [];
+
+		//time
+		data.push(time);
+		// position
+		data.push(xPosition);
+		data.push(zPosition);
+		// velocity
+		data.push(speed*Math.sin(rotateAngle));
+		data.push(speed*Math.cos(rotateAngle));
+		// acceleration
+		data.push(0);
+		data.push(0);
+		// jerk
+		data.push(0);
+		data.push(0);
+		//angular velocity
+		data.push(param.rotationVelocity);
+
+		//push array to record
+		records.push(data);
+	}
+
+}
+
 // resets when r pressed , change camera view when c pressed
 function keyTyped(){
 
@@ -343,6 +414,7 @@ function reset(){
 	speed = 0;
 	rotateAngle = 0;
 	param.targetVelocity = 0;
+	records = [recordsIndex];
 	//event
 	eventDoneFlag = false;
 	eventStartFlag = false;
