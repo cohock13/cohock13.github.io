@@ -23,7 +23,7 @@ function parameters(){
         document.body.removeChild(link);
 
         //array reset
-        records = [recordIndex];
+        records = [recordsIndex];
     }
 }
 
@@ -44,8 +44,8 @@ let wheelResilience = 0.02;
 let maxRotationVelocity = 1;
 let deltaSpeed = 0.08; // targetVelocity += delta
 let maxSpeed = 15;
-let speedFeedbackGain = 1.2;
-this.speedThreshold = 0.04;
+let speedFeedbackGain = 0.03;
+let speedThreshold = 0.04;
 
 let cameraX = 0;
 let cameraY = 0;
@@ -153,6 +153,7 @@ function setGround(){
 // speed update by keypress and position update
 function updateSpeedsAndPositon(){
 
+	
 	// speed control
 	// 1. speed is 0 when abs speed is too low
 	if(abs(speed) < speedThreshold){
@@ -166,18 +167,18 @@ function updateSpeedsAndPositon(){
 	else if(speed < 0){
 		speed += param.speedDeceleration;
 	}
+	
 
 	// 3. speed has max and min
 	speed = constrain(speed,0,maxSpeed);
-
 	param.targetVelocity = constrain(param.targetVelocity,0,maxSpeed);
 
-	// go forward by "w" 
+	// go forward by "w" or up_arrow
 	if(keyIsDown(87)||keyIsDown(38)){
 		param.targetVelocity += deltaSpeed;
 	}
 
-	// go backward by "s" 
+	// go backward by "s" or down_arrow
 	if(keyIsDown(83)||keyIsDown(40)){
 		param.targetVelocity -= deltaSpeed;
 	}
@@ -192,14 +193,13 @@ function updateSpeedsAndPositon(){
 		param.rotationVelocity += deltaRotationAngle;
 	}
 
-	// angular resilience
+	// angle resilience by wheel
 	if(param.rotationVelocity > 0){
 		param.rotationVelocity -= wheelResilience;
 	}
 	else{
 		param.rotationVelocity += wheelResilience;
 	}
-
 	if(abs(param.rotationVelocity) <= wheelResilience){
 		param.rotationVelocity = 0;
 	}
@@ -207,18 +207,22 @@ function updateSpeedsAndPositon(){
 	//angular constrain
 	param.rotationVelocity = constrain(param.rotationVelocity,-maxRotationVelocity,maxRotationVelocity);
 
+	// speed and angle update
 	rotateAngle += param.rotationVelocity;
-	speed += speedFeedbackGain*(-param.targetVelocity-speed);
+	speed = abs(speed);
+	speed += speedFeedbackGain*(param.targetVelocity-speed);
 
 	/*
+	// angle control by mouse 
 	if(param.handleMouseMode){
 		let w = windowWidth/2;
 		rotateAngle = -180*((mouseX-w)/w);
 	}
 	*/
 
-	xPosition += speed*sin(rotateAngle); 
-	zPosition += speed*cos(rotateAngle);
+	// position update 
+	xPosition += -speed*sin(rotateAngle); 
+	zPosition += -speed*cos(rotateAngle);
 
 }
 
@@ -229,6 +233,7 @@ function drawObjects(){
 	setObjectModel(lampModel,color('rgb(200,200,200)'),45,0,1500,0);
 	setObjectModel(lampModel,color('rgb(200,200,200)'),45,-1500,-1500,0);
 
+	// building modoki
 	setObjectAndDetectCollision(color('rgb(50,50,50)'),0,0,900,100);
 	setObjectAndDetectCollision(color('rgb(50,50,50)'),1500,1500,900,100);
 	setObjectAndDetectCollision(color('rgb(70,70,70)'),-1500,0,900,100);
@@ -236,8 +241,6 @@ function drawObjects(){
 	setObjectAndDetectCollision(color('rgb(60,60,60)'),1500,-1550,900,100);
 	setObjectAndDetectCollision(color('rgb(90,90,90)'),-1500,1500,900,100);
 	setObjectAndDetectCollision(color('rgb(100,100,100)'),0,-1500,900,100);
-
-
 
 }
 
@@ -371,7 +374,7 @@ function recordData(){
 	time += dt;
 
 	// acceleration and jerk calc
-	tmpVelocityRecord.push(-speed);
+	tmpVelocityRecord.push(speed);
 	
 	let currentAcceleration = (tmpVelocityRecord[1]-tmpVelocityRecord[0])/dt;
 	tmpAccRecord.push(currentAcceleration);
@@ -395,7 +398,7 @@ function recordData(){
 		data.push(xPosition);
 		data.push(zPosition);
 		// velocity
-		let tmpSpeed = -speed;
+		let tmpSpeed = speed;
 		data.push(tmpSpeed);
 		data.push(tmpSpeed*Math.sin(rotateAngle));
 		data.push(tmpSpeed*Math.cos(rotateAngle));
