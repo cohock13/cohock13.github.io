@@ -17,7 +17,7 @@ function setup(){
 	let gui = new dat.GUI();
 
 	gui.add(param,"omega",0,3,0.001).listen();
-	gui.add(param,"zeta",0,3,0.001).listen();
+	gui.add(param,"zeta",0,2,0.001).listen();
 	gui.open();
 	
 }
