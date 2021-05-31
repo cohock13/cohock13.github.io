@@ -92,7 +92,7 @@ function drawFunction(){
 	fill(255,0,0);
 	text("1",left-0.03*windowWidth,height_+top_-0.02*windowHeight);
 	fill(10);
-	text("x(t)",left-0.05*windowWidth,top_);
+	text("x(t)",left-0.07*windowWidth,top_);
 	text("t",windowWidth*0.5,height_*2+top_+0.05*windowHeight);
 
 
@@ -111,5 +111,11 @@ function drawFunction(){
 		t += dt;
 
 	}
+
+}
+
+function windowResized() {
+
+	resizeCanvas(windowWidth, windowHeight*0.9);
 
 }

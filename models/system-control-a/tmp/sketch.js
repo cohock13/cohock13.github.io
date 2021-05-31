@@ -113,3 +113,9 @@ function drawFunction(){
 	}
 
 }
+
+function windowResized() {
+
+	resizeCanvas(windowWidth, windowHeight*0.9);
+
+}
