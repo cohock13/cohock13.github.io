@@ -1,8 +1,10 @@
 //----- parameters -----//
 
 function parameters(){
+
+	this.team = "B";
 	this.targetVelocity = 0;
-	this.speedDeceleration = 0.03;
+	this.speedDeceleration = 0.05;
 	this.rotationVelocity = 0;
 	this.handleMouseMode = false;
 	this.recording = false;
@@ -29,7 +31,10 @@ function parameters(){
 
 let time = 0;
 let records = [];
-let recordsIndex = ["time","positionX","positionY","velocity(abs)","velocityX","velocityY","acceleration(abs)","accelerationX","accelerationY","Jerk(abs)","JerkX","JerkY","angularVelocity"]
+let timeOfRecords = 1;
+let tmprecords = []
+let recordingTime = -1;
+let recordsIndex = ["time","positionX","positionY","velocity(abs)","velocityX","velocityY","acceleration(abs)","accelerationX","accelerationY","Jerk(abs)","JerkX","JerkY","angularVelocity","Operator Action","Event Info"]
 let tmpVelocityRecord = [0];
 let tmpAccRecord = [0,0];
 let tmpJerkRecord = [0];
@@ -39,9 +44,9 @@ let zPosition;
 
 let speed = 0;
 let rotateAngle = 0;
-let deltaRotationAngle = 0.05;
-let wheelResilience = 0.02;
-let maxRotationVelocity = 1;
+let deltaRotationAngle = 0.03;
+let wheelResilience = 0.01;
+let maxRotationVelocity = 0.7;
 let deltaSpeed = 0.08; // targetVelocity += delta
 let maxSpeed = 15;
 let speedFeedbackGain = 0.03;
@@ -95,6 +100,10 @@ function setup(){
 
 	let gui = new dat.GUI();
 
+	let teamSelectGUI = gui.addFolder("Select Team");
+	teamSelectGUI.add(param,"team",["A","B"]);
+	teamSelectGUI.open();
+
 	let vehicleParameterGUI = gui.addFolder("Speed Parameter");
 	vehicleParameterGUI.add(param,"targetVelocity",0,15,0.2).name("Target Velocity").listen();
 	vehicleParameterGUI.add(param,"speedDeceleration",0,0.2,0.01).name("Friction");
@@ -105,7 +114,6 @@ function setup(){
 	wheelParameterGUI.open();
 
 	let recordingGUI = gui.addFolder("Data recording");
-	recordingGUI.add(param,"recording").name("Recording");
 	recordingGUI.add(param,"exportCSV").name("Export CSV");
 	recordingGUI.open();
 
@@ -143,12 +151,12 @@ function setGround(){
 	translate(0,15,0);
 	fill(color(65));
 	texture(roadTexture);
-	box(5000,20,5000);
+	box(6000,20,6000);
 	pop();
 
 }
 
-
+let operationMessage = "";
 
 // speed update by keypress and position update
 function updateSpeedsAndPositon(){
@@ -176,21 +184,25 @@ function updateSpeedsAndPositon(){
 	// go forward by "w" or up_arrow
 	if(keyIsDown(87)||keyIsDown(38)){
 		param.targetVelocity += deltaSpeed;
+		operationMessage += "↑"
 	}
 
 	// go backward by "s" or down_arrow
 	if(keyIsDown(83)||keyIsDown(40)){
 		param.targetVelocity -= deltaSpeed;
+		operationMessage += "↓"
 	}
 
 	// rotate right by "d" or right_arrow
 	if(keyIsDown(68)||keyIsDown(39)){
 		param.rotationVelocity -= deltaRotationAngle;
+		operationMessage += "→"
 	}
 
 	// rotate left by "a" or left_arrow
 	if(keyIsDown(65)||keyIsDown(37)){
 		param.rotationVelocity += deltaRotationAngle;
+		operationMessage += "←"
 	}
 
 	// angle resilience by wheel
@@ -234,15 +246,19 @@ function drawObjects(){
 	setObjectModel(lampModel,color('rgb(200,200,200)'),45,-1500,-1500,0);
 
 	// building modoki
-	setObjectAndDetectCollision(color('rgb(50,50,50)'),0,0,900,100);
-	setObjectAndDetectCollision(color('rgb(50,50,50)'),1500,1500,900,100);
-	setObjectAndDetectCollision(color('rgb(70,70,70)'),-1500,0,900,100);
-	setObjectAndDetectCollision(color('rgb(60,60,60)'),1500,0,900,100);
-	setObjectAndDetectCollision(color('rgb(60,60,60)'),1500,-1550,900,100);
-	setObjectAndDetectCollision(color('rgb(90,90,90)'),-1500,1500,900,100);
-	setObjectAndDetectCollision(color('rgb(100,100,100)'),0,-1500,900,100);
+	let buildingPos = 1800;
+	let buildingSize = 950;
+	//setObjectAndDetectCollision(color('rgb(50,50,50)'),0,0,buildingSize,100);
+	setObjectAndDetectCollision(color('rgb(50,50,50)'),buildingPos,buildingPos,buildingSize,100);
+	setObjectAndDetectCollision(color('rgb(70,70,70)'),-buildingPos,0,buildingSize,100);
+	setObjectAndDetectCollision(color('rgb(60,60,60)'),buildingPos,0,buildingSize,100);
+	setObjectAndDetectCollision(color('rgb(60,60,60)'),buildingPos,-buildingPos,buildingSize,100);
+	setObjectAndDetectCollision(color('rgb(90,90,90)'),-buildingPos,buildingPos,buildingSize,100);
+	setObjectAndDetectCollision(color('rgb(100,100,100)'),0,-buildingPos,buildingSize,100);
 
 }
+
+
 
 function setObjectModel(model_,color_,scale_,centerX,centerZ,height_,rotate=false){
 
@@ -352,22 +368,136 @@ let eventStartFlag = false;
 let eventDoneFlag = false;
 let eventCarPosition = -2000; // default start pos :(-2000,700)
 let eventCarEndPosition = 400; // default end pos : (400,700)
+
+
+let eventflag = false;
+let eventMessage = "";
+let signalColor = [1,0,0]; // Green,Yellow,Red
+let signalTime = 1000000;
+
 function events(){
 
-	let startPositionFlag = (xStartPosition-100 <= xPosition && xPosition <= xStartPosition+100 && zStartPosition-100 <= zPosition && zPosition <= zStartPosition+100)
-	// event 1 : car speedruns when you over a line
-	if((startPositionFlag || eventStartFlag) && !eventDoneFlag){
-		setObjectModel(carModelData,color('rgb(50,50,200)'),1.3,eventCarPosition,700,-30,rotate=true);
-		eventCarPosition += 30;
-		eventStartFlag = true;
+	// Team A
+	if(param.team === "A"){
+		if(mouseIsPressed && time > 10){
+
+			if(mouseButton === CENTER){
+				// Turn right
+				param.rotationVelocity -= deltaRotationAngle;
+				eventflag = true;
+				eventMessage = "→"
+			}
+			else if(mouseButton === LEFT){
+				// Turn left
+				param.rotationVelocity += deltaRotationAngle;
+				eventflag = true;
+				eventMessage = "←"
+			}
+		}
+
 	}
-	if(eventCarPosition >= eventCarEndPosition){
-		eventDoneFlag = true;
+	// Team B
+	else{
+
+
+		if(signalColor[2] === 1 && time > recordingTime-3){
+			signalColor = [1,0,0];
+			signalTime = 100000;
+		}
+		if(mouseIsPressed){
+
+				if(signalColor[0] === 1){
+					// g -> y
+					recordingTime = time+10;
+					signalTime = time+2;
+					signalColor = [0,1,0];
+				}
+			}
+		
+
+		if(time > signalTime && signalColor[1] === 1){
+			// y -> g
+			signalColor = [0,0,1];
+		}
+
+
+		setSignal(1200,2900,signalColor,-90);
+		setSignal(-700,-3000,signalColor,90);
+
+		if(signalColor[0] === 1){
+			eventMessage = "G";
+		}
+		if(signalColor[1] === 1){
+			eventMessage = "Y";
+		}
+		if(signalColor[2] === 1){
+			eventMessage = "R";
+		}
+	}
+
+}
+
+function setSignal(posX,posY,signalColor,rotationAngle){
+
+	push();
+    translate(posX,0,posY);
+
+	// rect*2
+	noStroke();
+	rotateY(rotationAngle);
+	fill(50);
+	translate(0,-300,0);
+	box(300,75,50);
+	translate(125,200,0);
+	box(50,400,50);
+
+
+	// cylinder*3
+	let signalFillColor;
+	let signalPosition;
+	// green
+	if(signalColor[0] === 1){
+		signalFillColor = color("rgb(44,186,119)");
+		signalPosition = -240;
+
+	}
+
+	// yellow
+	if(signalColor[1] === 1){
+		signalFillColor = color("rgb(248,229,140)");
+		signalPosition = -160;
+	}
+
+
+	// blue
+	if(signalColor[2] === 1){
+		signalFillColor = color("rgb(239,64,80)");
+		signalPosition = -80;
+	}
+
+	rotateX(90);
+	fill(signalFillColor);
+	translate(signalPosition,0,200);
+	cylinder(25,60);
+	pop();
+	
+
+
+}
+
+
+function mouseReleased(){
+	if(eventflag){
+		recordingTime = time+10;
+		eventflag = false;
 	}
 }
 
+
 // Data Recording
 function recordData(){
+
+	console.log(time,recordingTime,timeOfRecords);
 	
 	// time calc
 	let dt = 1/60;
@@ -386,38 +516,59 @@ function recordData(){
 	tmpAccRecord.shift();
 	tmpJerkRecord.shift();
 
+	// collection data
+	let data = [];
 
-	if(param.recording){
+	//time
+	data.push(time);
+	// position
+	data.push(xPosition);
+	data.push(zPosition);
+	// velocity
+	let tmpSpeed = speed;
+	data.push(tmpSpeed);
+	data.push(tmpSpeed*Math.sin(rotateAngle));
+	data.push(tmpSpeed*Math.cos(rotateAngle));
+	// acceleration
+	let tmpAcc = tmpAccRecord[1];
+	data.push(tmpAcc);
+	data.push(tmpAcc*Math.sin(rotateAngle));
+	data.push(tmpAcc*Math.cos(rotateAngle));
+	// jerk
+	let tmpJerk = tmpJerkRecord[0];
+	data.push(tmpJerk);
+	data.push(tmpJerk*Math.sin(rotateAngle));
+	data.push(tmpJerk*Math.cos(rotateAngle));
+	//angular velocity
+	data.push(param.rotationVelocity);
 
-		// collection data
-		let data = [];
+	data.push(operationMessage);
+	data.push(eventMessage);
 
-		//time
-		data.push(time);
-		// position
-		data.push(xPosition);
-		data.push(zPosition);
-		// velocity
-		let tmpSpeed = speed;
-		data.push(tmpSpeed);
-		data.push(tmpSpeed*Math.sin(rotateAngle));
-		data.push(tmpSpeed*Math.cos(rotateAngle));
-		// acceleration
-		let tmpAcc = tmpAccRecord[1];
-		data.push(tmpAcc);
-		data.push(tmpAcc*Math.sin(rotateAngle));
-		data.push(tmpAcc*Math.cos(rotateAngle));
-		// jerk
-		let tmpJerk = tmpJerkRecord[0];
-		data.push(tmpJerk);
-		data.push(tmpJerk*Math.sin(rotateAngle));
-		data.push(tmpJerk*Math.cos(rotateAngle));
-		//angular velocity
-		data.push(param.rotationVelocity);
+	//console.log(time,operationMessage,eventMessage);
 
-		//push array to record
-		records.push(data);
+	operationMessage = "";
+	eventMessage = "";
+
+	//push array to record
+	tmprecords.push(data);
+
+
+	// pop if len(tmprecords) > 60*20
+	if(tmprecords.length > 1800){
+		tmprecords.shift();
 	}
+
+	// record data for csv export
+	if(abs(time-recordingTime)<0.001){
+		records.push([timeOfRecords]);
+		for(let i = 0; i < tmprecords.length; ++i){
+			records.push(tmprecords[i]);
+		}
+		timeOfRecords += 1;
+		recordingTime = -1;
+	}
+	
 
 }
 
@@ -432,6 +583,7 @@ function keyTyped(){
 		// switch tpp <-> fpp
 		isCameraTPP = !isCameraTPP; 
 	}
+
 }
 
 // reset agent's position, velocity (and position of camera)
@@ -443,12 +595,11 @@ function reset(){
 	rotateAngle = 0;
 	param.targetVelocity = 0;
 	records = [recordsIndex];
+	recordtime = 1;
 	//event
 	eventDoneFlag = false;
 	eventStartFlag = false;
 	eventCarPosition = -2000
-
-
 
 }
 
