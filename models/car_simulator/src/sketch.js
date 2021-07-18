@@ -2,7 +2,7 @@
 
 function parameters(){
 
-	this.team = "B";
+	this.team = "A";
 	this.targetVelocity = 0;
 	this.speedDeceleration = 0.05;
 	this.rotationVelocity = 0;
@@ -376,7 +376,7 @@ let signalColor = [1,0,0]; // Green,Yellow,Red
 let signalTime = 1000000;
 
 function events(){
-
+	console.log(param.team);
 	// Team A
 	if(param.team === "A"){
 		if(mouseIsPressed && time > 10){
@@ -422,7 +422,7 @@ function events(){
 
 
 		setSignal(1200,2900,signalColor,-90);
-		setSignal(-700,-3000,signalColor,90);
+		setSignal(-1300,-3000,signalColor,90);
 
 		if(signalColor[0] === 1){
 			eventMessage = "G";
@@ -496,8 +496,6 @@ function mouseReleased(){
 
 // Data Recording
 function recordData(){
-
-	console.log(time,recordingTime,timeOfRecords);
 	
 	// time calc
 	let dt = 1/60;
