@@ -2,7 +2,7 @@
 
 function parameters(){
 
-	this.team = "B";
+	this.team = "A";
 	this.targetVelocity = 0;
 	this.speedDeceleration = 0.05;
 	this.rotationVelocity = 0;
