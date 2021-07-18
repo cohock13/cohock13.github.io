@@ -377,6 +377,7 @@ let signalTime = 1000000;
 
 function events(){
 	console.log(param.team);
+
 	// Team A
 	if(param.team === "A"){
 		if(mouseIsPressed && time > 10){
@@ -421,8 +422,8 @@ function events(){
 		}
 
 
-		setSignal(1200,2900,signalColor,-90);
-		setSignal(-1300,-3000,signalColor,90);
+		setSignal(1300,2900,signalColor,-90);
+		setSignal(-1250,-3000,signalColor,90);
 
 		if(signalColor[0] === 1){
 			eventMessage = "G";

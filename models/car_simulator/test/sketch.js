@@ -422,7 +422,7 @@ function events(){
 		}
 
 
-		setSignal(1200,2900,signalColor,-90);
+		setSignal(1300,2900,signalColor,-90);
 		setSignal(-1250,-3000,signalColor,90);
 
 		if(signalColor[0] === 1){
