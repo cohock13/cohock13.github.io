@@ -99,11 +99,7 @@ function setup(){
 	// ----------------------- GUI Settings ---------------------------------------
 
 	let gui = new dat.GUI();
-
-	let teamSelectGUI = gui.addFolder("Select Team");
-	teamSelectGUI.add(param,"team",["A","B"]);
-	teamSelectGUI.open();
-
+	
 	let vehicleParameterGUI = gui.addFolder("Speed Parameter");
 	vehicleParameterGUI.add(param,"targetVelocity",0,15,0.2).name("Target Velocity").listen();
 	vehicleParameterGUI.add(param,"speedDeceleration",0,0.2,0.01).name("Friction");
