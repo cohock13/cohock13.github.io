@@ -2,9 +2,11 @@
 let leftCamera, rightCamera;
 let leftParam,rightParam;
 
-let fRate = 120; // frame Rate
+let fRate = 60; // frame Rate
 let dt = 1/fRate;
 let canvasWidthCoef = 0.43;
+
+let t = 0;
 
 let leftCells,rightCells;
 let redCellColor = "rgb(255,51,51)";
@@ -13,26 +15,33 @@ let xBoundary = 300;
 let yBoundary = 300;
 let zBoundary = 100;
 
+let records = [];
+let vecRecords = [];
+let maxRecordLength = 1000;
+
 
 function parameters() {
 
     this.score = 10;
 
-    this.redMode = "Random";
-    this.greenMode = "Random";
+    this.cellMode = "Random";
 
-    this.evalDistMode = "Exp";
-    this.evalTimeMode = "Average";
-    this.evalExpCoef = 1;
-    this.evalDistRange = 10;
-    this.evalTimeRange = 1;
+    this.evalDistMode = "Range";
+    this.evalTimeMode = "Instant";
+    this.evalExpAmp = 2;
+    this.evalExpCoef = 0.02;
+    this.evalDistRange = 20;
+    this.evalTimeRange = 30;
 
-    this.redCellNum = 200;
+    this.redCellNum = 400;
     this.greenCellNum = 200;
-    this.maxRedCellInitVelocity = 50;
+    this.maxRedCellInitVelocity = 30;
     this.maxGreenCellInitVelocity = 10;
-    this.redCellRadius = 3;
+    this.redCellRadius = 5;
     this.greenCellRadius = 10;
+
+    this.ka = 0.5;
+    this.kb = 1;
 
     this.isSimLightON = true;
 
@@ -40,6 +49,23 @@ function parameters() {
 		leftCells = new cells(leftParam);
         rightCells = new cells(rightParam);
 	}
+
+    this.exportCSV = function(){
+
+        // output 
+
+        let data = records.map((record)=>record.join(',')).join('\r\n');
+         
+        let bom  = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        let blob = new Blob([bom, data], {type: 'text/csv'});
+        let url = (window.URL || window.webkitURL).createObjectURL(blob);
+        let link = document.createElement('a');
+        link.download = 'result.csv';
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
 }
 
@@ -73,48 +99,44 @@ function setup() {
   leftCamera.setViewport([0,0,canvasWidth,canvasHeight]);
   rightCamera.setViewport([canvasWidth,0,canvasWidth,canvasHeight]);
 
-
   // gui settings 
   leftParam = new parameters();
   rightParam = new parameters();
+  rightParam.cellMode = "Parallel";
+  rightParam.maxGreenCellInitVelocity = 10;
+  rightParam.maxRedCellInitVelocity = 10;
+
   let gui = new dat.GUI();
 
   let scoreGUI = gui.addFolder("Score");
-  scoreGUI.add(leftParam,"score",0,100,0.1).name("Left");
-  scoreGUI.add(rightParam,"score",0,100,0.1).name("rightCellModeGUI");
+  scoreGUI.add(leftParam,"score",-0.2,1,0.01).name("Left").listen();
+  scoreGUI.add(rightParam,"score",-0.2,1,0.01).name("Right").listen();
   scoreGUI.open();
 
   let cellModeGUI = gui.addFolder("Cell Mode");
-
-  let leftCellModeGUI = cellModeGUI.addFolder("Left");
-  leftCellModeGUI.add(leftParam,"redMode",["Simple Force","Random","Position Fixed"]).name("Red");
-  leftCellModeGUI.add(leftParam,"greenMode",["Simple Force","Random","Position Fixed"]).name("Green");
-  leftCellModeGUI.open();
-  let rightCellModeGUI = cellModeGUI.addFolder("Right");
-  rightCellModeGUI.add(rightParam,"redMode",["Simple Force","Random","Position Fixed"]).name("Red");
-  rightCellModeGUI.add(rightParam,"greenMode",["Simple Force","Random","Position Fixed"]).name("Green");
-  rightCellModeGUI.open();
+  cellModeGUI.add(leftParam,"cellMode",["Parallel","Random"]).name("Left");
+  cellModeGUI.add(rightParam,"cellMode",["Parallel","Random"]).name("Right");
   cellModeGUI.open();
 
   let evalGUI = gui.addFolder("Evaluation");
-  let evalDistModeGUI = evalGUI.addFolder("Evaluation Mode(Distance)");
-  evalDistModeGUI.add(leftParam,"evalDistMode",["Exp","Range"]).name("Left");
-  evalDistModeGUI.add(rightParam,"evalDistMode",["Exp","Range"]).name("Right");
-  evalDistModeGUI.open();
-  let evalTimeModeGUI = evalGUI.addFolder("Evaluation Mode(Velocity)");
-  evalTimeModeGUI.add(leftParam,"evalTimeMode",["Average","Instant","None"]).name("Left");
-  evalTimeModeGUI.add(rightParam,"evalTimeMode",["Average","Instant","None"]).name("Right");
-  evalTimeModeGUI.open();
+  let leftEvalGUI = evalGUI.addFolder("Left");
+  leftEvalGUI.add(leftParam,"evalDistMode",["Range"]).name("Distance");
+  leftEvalGUI.add(leftParam,"evalTimeMode",["Instant"]).name("Velocity");
+  leftEvalGUI.open();
+  let rightEvalGUI = evalGUI.addFolder("Right");
+  rightEvalGUI.add(rightParam,"evalDistMode",["Range"]).name("Distance");
+  rightEvalGUI.add(rightParam,"evalTimeMode",["Instant"]).name("Velocity");
+  rightEvalGUI.open();
   let evalParameterGUI = evalGUI.addFolder("Parameter");
   let leftEvalParameterGUI = evalParameterGUI.addFolder("Left");
-  leftEvalParameterGUI.add(leftParam,"evalExpCoef",0,10,0.1).name("Exp Coef");
+  leftEvalParameterGUI.add(leftParam,"evalExpCoef",0,0.2,0.01).name("Exp Coef");
   leftEvalParameterGUI.add(leftParam,"evalDistRange",0,30,1).name("Dist Range");
-  leftEvalParameterGUI.add(leftParam,"evalTimeRange",0,10).name("Time Range");
+  leftEvalParameterGUI.add(leftParam,"evalTimeRange",0,100,1).name("Time Range");
   leftEvalParameterGUI.open();
   let rightEvalParameterGUI = evalParameterGUI.addFolder("Right");
-  rightEvalParameterGUI.add(rightParam,"evalExpCoef",0,10,0.1).name("Exp Coef");
+  rightEvalParameterGUI.add(rightParam,"evalExpCoef",0,0.2,0.01).name("Exp Coef");
   rightEvalParameterGUI.add(rightParam,"evalDistRange",0,30,1).name("Dist Range");
-  rightEvalParameterGUI.add(rightParam,"evalTimeRange",0,10).name("Time Range");
+  rightEvalParameterGUI.add(rightParam,"evalTimeRange",0,100,1).name("Time Range");
   rightEvalParameterGUI.open();
   evalGUI.open();
 
@@ -125,10 +147,12 @@ function setup() {
   leftCellNumParameterGUI.add(leftParam,"redCellNum",1,500,1).name("Red");
   leftCellNumParameterGUI.add(leftParam,"greenCellNum",1,300,1).name("Green");
   leftCellNumParameterGUI.open();
+  /*
   let leftCellRadiusParameterGUI = leftCellParameterGUI.addFolder("Cell Radius");
-  leftCellRadiusParameterGUI.add(leftParam,"redCellRadius",1,10,0.1).name("Red");
-  leftCellRadiusParameterGUI.add(leftParam,"greenCellRadius",3,15,0.1).name("Green");
+  leftCellRadiusParameterGUI.add(leftParam,"redCellRadius",1,10,1).name("Red");
+  leftCellRadiusParameterGUI.add(leftParam,"greenCellRadius",3,15,1).name("Green");
   leftCellRadiusParameterGUI.open();
+  */
   let leftCellInitVelocityParameterGUI = leftCellParameterGUI.addFolder("Max Init Velocity");
   leftCellInitVelocityParameterGUI.add(leftParam,"maxRedCellInitVelocity",0,100,0.1).name("Red");
   leftCellInitVelocityParameterGUI.add(leftParam,"maxGreenCellInitVelocity",0,30,0.1).name("Green"); 
@@ -140,21 +164,35 @@ function setup() {
   rightCellNumParameterGUI.add(rightParam,"redCellNum",1,500,1).name("Red");
   rightCellNumParameterGUI.add(rightParam,"greenCellNum",1,300,1).name("Green");
   rightCellNumParameterGUI.open();
+  /*
   let rightCellRadiusParameterGUI = rightCellParameterGUI.addFolder("Cell Radius");
-  rightCellRadiusParameterGUI.add(rightParam,"redCellRadius",1,10,0.1).name("Red");
-  rightCellRadiusParameterGUI.add(leftParam,"greenCellRadius",3,15,0.1).name("Green");
+  rightCellRadiusParameterGUI.add(rightParam,"redCellRadius",1,10,1).name("Red");
+  rightCellRadiusParameterGUI.add(leftParam,"greenCellRadius",3,15,1).name("Green");
   rightCellRadiusParameterGUI.open();
+  */
   let rightCellInitVelocityParameterGUI = rightCellParameterGUI.addFolder("Max Init Velocity");
   rightCellInitVelocityParameterGUI.add(leftParam,"maxRedCellInitVelocity",0,100,0.1).name("Red");
   rightCellInitVelocityParameterGUI.add(rightParam,"maxGreenCellInitVelocity",0,30,0.1).name("Green"); 
   //rightCellInitVelocityParameterGUI.open();
   rightCellParameterGUI.open();
 
+  /*
   let modelParameterGUI = gui.addFolder("Simple Model");
+  let leftModelParameterGUI = modelParameterGUI.addFolder("Left");
+  leftModelParameterGUI.add(leftParam,"ka",0,5,0.1);
+  leftModelParameterGUI.add(leftParam,"kb",0,5,0.1);
+  leftModelParameterGUI.open();
+  let rightModelParameterGUI =  modelParameterGUI.addFolder("Right");
+  rightModelParameterGUI.add(rightParam,"ka",0,5,0.1);
+  rightModelParameterGUI.add(rightParam,"kb",0,5,0.1);
+  rightModelParameterGUI.open();
+  modelParameterGUI.open();
+  */
 
   let simulationGUI = gui.addFolder("Simulator");
   simulationGUI.add(leftParam,"isSimLightON").name("Light(left)");
   simulationGUI.add(rightParam,"isSimLightON").name("Light(right)");
+  simulationGUI.add(rightParam,"exportCSV").name("Export Score");
   simulationGUI.add(leftParam,"reset").name("Reset");
   simulationGUI.open();
 
@@ -166,14 +204,23 @@ function setup() {
 } 
 
 function draw(){
-  
-  leftCells.updatePosition();
-  leftCells.updateVelocity();
-  rightCells.updatePosition();
-  rightCells.updateVelocity();
-  leftCells.drawCells(leftCamera,leftParam);
-  rightCells.drawCells(rightCamera,rightParam);
 
+  t += dt;
+
+  // calc scores
+  updateScores(leftParam,leftCells,"Right");
+  updateScores(rightParam,leftCells,"Left");
+
+  saveScores(leftParam,rightParam);
+
+  leftCells.updatePosition();
+  //leftCells.updateVelocity(leftParam);
+  leftCells.drawCells(leftCamera,leftParam);
+
+  rightCells.updatePosition();
+  //rightCells.updateVelocity(rightParam);
+  rightCells.drawCells(rightCamera,rightParam);
+  
   displayCanvas();
 
 }
@@ -224,33 +271,69 @@ class cells {
 
         randomSeed(100);
 
-        for(let i=0;i<param.redCellNum;++i){
-            let xPos = random(-xBoundary,xBoundary);
-            let yPos = random(-yBoundary,yBoundary);
-            let zPos = random(-zBoundary,zBoundary);
-            let tmpPos = createVector(xPos,yPos,zPos);
-            this.redCellPosition.push(tmpPos);
+        if(param.cellMode == "Random"){
 
-            let xVel = random(-param.maxRedCellInitVelocity,param.maxRedCellInitVelocity);
-            let yVel = random(-param.maxRedCellInitVelocity,param.maxRedCellInitVelocity);
-            let zVel = random(-param.maxRedCellInitVelocity,param.maxRedCellInitVelocity);
-            let tmpVel = createVector(xVel,yVel,zVel);
-            this.redCellVelocity.push(tmpVel);
+            for(let i=0;i<param.redCellNum;++i){
+                let xPos = random(-xBoundary,xBoundary);
+                let yPos = random(-yBoundary,yBoundary);
+                let zPos = random(-zBoundary,zBoundary);
+                let tmpPos = createVector(xPos,yPos,zPos);
+                this.redCellPosition.push(tmpPos);
+
+                let xVel = random(-param.maxRedCellInitVelocity,param.maxRedCellInitVelocity);
+                let yVel = random(-param.maxRedCellInitVelocity,param.maxRedCellInitVelocity);
+                let zVel = random(-param.maxRedCellInitVelocity,param.maxRedCellInitVelocity);
+                let tmpVel = createVector(xVel,yVel,zVel);
+                this.redCellVelocity.push(tmpVel);
+            }
+
+            for(let i=0;i<param.greenCellNum;++i){
+                let xPos = random(-xBoundary,xBoundary);
+                let yPos = random(-yBoundary,yBoundary);
+                let zPos = random(-zBoundary,zBoundary);
+
+                let tmpVec = createVector(xPos,yPos,zPos);
+                this.greenCellPosition.push(tmpVec);
+
+                let xVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
+                let yVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
+                let zVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
+                let tmpVel = createVector(xVel,yVel,zVel);
+                this.greenCellVelocity.push(tmpVel);
+            }
         }
+        else{
+            for(let i=0;i<param.greenCellNum;++i){
+                let xPos = random(-xBoundary,xBoundary);
+                let yPos = random(-yBoundary,yBoundary);
+                let zPos = random(-zBoundary,zBoundary);
 
-        for(let i=0;i<param.greenCellNum;++i){
-            let xPos = random(-xBoundary,xBoundary);
-            let yPos = random(-yBoundary,yBoundary);
-            let zPos = random(-zBoundary,zBoundary);
+                let tmpVec = createVector(xPos,yPos,zPos);
+                this.greenCellPosition.push(tmpVec);
 
-            let tmpVec = createVector(xPos,yPos,zPos);
-            this.greenCellPosition.push(tmpVec);
+                let xVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
+                let yVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
+                let zVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
+                let tmpVel = createVector(xVel,yVel,zVel);
+                this.greenCellVelocity.push(tmpVel);
+            }
 
-            let xVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
-            let yVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
-            let zVel = random(-param.maxGreenCellInitVelocity,param.maxGreenCellInitVelocity);
-            let tmpVel = createVector(xVel,yVel,zVel);
-            this.greenCellVelocity.push(tmpVel);
+            let tmpLength = this.greenCellPosition.length;
+
+            for(let i=0;i<param.redCellNum;++i){
+
+                let num = i%tmpLength; 
+                let tmpPos = this.greenCellPosition[num].copy();
+                let tmpAddVel = p5.Vector.random3D();
+                tmpAddVel.mult(param.redCellRadius+param.greenCellRadius);
+                tmpPos.add(tmpAddVel);
+                this.redCellPosition.push(tmpPos);
+
+                let tmpVel = this.greenCellVelocity[num].copy();
+                this.redCellVelocity.push(tmpVel);
+            }
+
+            
         }
 
     }
@@ -283,9 +366,44 @@ class cells {
 
     }
 
-    updateVelocity(){
+    updateVelocity(param){
 
-        // tikara toka wo kaku yo
+        if(param.cellMode == "Parallel"){
+
+            for(let i=0;i<this.redCellPosition.length;++i){ // i : red cell
+
+                let x1 = this.redCellPosition[i].x;
+                let y1 = this.redCellPosition[i].x;
+                let z1 = this.redCellPosition[i].y;
+
+                for(let j=0;j<this.greenCellPosition.length;++j){ // j : green cell
+                    
+                    // calc radius
+                    let x2 = this.greenCellPosition[j].x;
+                    let y2 = this.greenCellPosition[j].y;
+                    let z2 = this.greenCellPosition[j].z;
+
+                    let cellDist = dist(x1,y1,z1,x2,y2,z2);
+
+                    // calc force
+
+                    let force = (param.ka/cellDist - param.kb/(cellDist*cellDist));
+
+                    // calc eigenvector
+
+                    let vectorRed2Green = createVector(x2-x1,y2-y1,z2-z1);
+                    vectorRed2Green.normalize();
+                    vectorRed2Green.mult(force*dt);
+                    let vectorGreen2Red = vectorRed2Green.copy();
+                    vectorGreen2Red.rotate(PI);
+                    
+                    this.redCellVelocity[i].add(vectorRed2Green);
+                    //this.greenCellVelocity[j].add(vectorGreen2Red);
+
+                }
+            }
+        }
+
 
     }
 
@@ -397,6 +515,68 @@ function positionAdjustment(vec){
 
     return retVec;
 
+}
+
+function updateScores(param,cells,side){
+
+    let tmpScore = 0;
+
+    //console.log(cells.redCellPosition,cells.greenCellPosition,param.cellMode);
+
+    if(param.evalDistMode == "Range"){
+        if(param.evalTimeMode == "Average"){
+            
+        }
+        else if(param.evalTimeMode == "Instant"){
+
+            for(let i=0;i<cells.greenCellPosition.length;++i){
+                for(let j=0;j<cells.redCellPosition.length;++j){
+
+                    if(side == "Right"){
+                        if(cellDist(rightCells,i,j) < param.evalDistRange){
+                            let angle = rightCells.greenCellVelocity[i].angleBetween(rightCells.redCellVelocity[j]);
+                            //console.log(t,cos(angle),i,j,param.cellMode)
+                            tmpScore += cos(angle);
+                        }
+                    }
+                    else{
+                        if(cellDist(leftCells,i,j) < param.evalDistRange){
+                            let angle = leftCells.greenCellVelocity[i].angleBetween(leftCells.redCellVelocity[j]);
+                            //console.log(t,cos(angle),i,j,param.cellMode)
+                            tmpScore += cos(angle);
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+    else{ // exp
+
+    }
+    
+    param.score = tmpScore/cells.redCellPosition.length;
+
+}
+
+function saveScores(leftParam,rightParam){
+
+    let tmpRecord = [t,leftParam.score,rightParam.score,leftParam.evalDistMode,leftParam.evalTimeMode,rightParam.evalDistMode,rightParam.evalTimeMode]
+    records.push(tmpRecord);
+
+    //vecRecords.push(leftCells.redCellVelocity);
+
+    if(records.length > maxRecordLength){
+        records.shift();
+    }
+
+}
+
+function cellDist(cells,i,j){
+
+    let d = cells.greenCellPosition[i].dist(cells.redCellPosition[j]);
+
+    return d;
 }
 
 function test(cam){

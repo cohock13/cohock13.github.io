@@ -21,7 +21,7 @@ function setup(){
     createCanvas(windowWidth,windowHeight,WEBGL);
     setAttributes("antialias",true);
 
-	createEasyCam();
+	createEasyCam
 
     canvasWidth = 0.43*windowWidth;
 	canvasHeight = windowHeight;

@@ -23,6 +23,7 @@ function parameters() {
 		this.agent_num = this.num;
 		init();
 	}
+	
 }
 
 function setup() {
