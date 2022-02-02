@@ -102,15 +102,21 @@ function setup() {
   // gui settings 
   leftParam = new parameters();
   rightParam = new parameters();
+
   rightParam.cellMode = "Parallel";
   rightParam.maxGreenCellInitVelocity = 10;
   rightParam.maxRedCellInitVelocity = 10;
 
+  leftCells = new cells(leftParam);
+  rightCells = new cells(rightParam);
+
   let gui = new dat.GUI();
 
   let scoreGUI = gui.addFolder("Score");
-  scoreGUI.add(leftParam,"score",-0.2,1,0.01).name("Left").listen();
-  scoreGUI.add(rightParam,"score",-0.2,1,0.01).name("Right").listen();
+  let maxScoreLeft = leftCells.redCellPosition.length/leftCells.greenCellPosition.length;
+  scoreGUI.add(leftParam,"score",-0.1,maxScoreLeft,0.01).name("Left").listen();
+  let maxScoreRight = rightCells.redCellPosition.length/rightCells.greenCellPosition.length;
+  scoreGUI.add(rightParam,"score",-0.1,maxScoreRight,0.01).name("Right").listen();
   scoreGUI.open();
 
   let cellModeGUI = gui.addFolder("Cell Mode");
@@ -198,8 +204,6 @@ function setup() {
 
   //gui.destroy();
 
-  leftCells = new cells(leftParam);
-  rightCells = new cells(rightParam);
 
 } 
 
@@ -208,8 +212,8 @@ function draw(){
   t += dt;
 
   // calc scores
-  updateScores(leftParam,leftCells,"Right");
-  updateScores(rightParam,leftCells,"Left");
+  updateScores(leftParam,leftCells,"Left");
+  updateScores(rightParam,leftCells,"Right");
 
   saveScores(leftParam,rightParam);
 
@@ -322,7 +326,7 @@ class cells {
 
             for(let i=0;i<param.redCellNum;++i){
 
-                let num = i%tmpLength; 
+                let num = int(random(0,param.greenCellNum-1)); 
                 let tmpPos = this.greenCellPosition[num].copy();
                 let tmpAddVel = p5.Vector.random3D();
                 tmpAddVel.mult(param.redCellRadius+param.greenCellRadius);
@@ -535,14 +539,12 @@ function updateScores(param,cells,side){
                     if(side == "Right"){
                         if(cellDist(rightCells,i,j) < param.evalDistRange){
                             let angle = rightCells.greenCellVelocity[i].angleBetween(rightCells.redCellVelocity[j]);
-                            //console.log(t,cos(angle),i,j,param.cellMode)
                             tmpScore += cos(angle);
                         }
                     }
                     else{
                         if(cellDist(leftCells,i,j) < param.evalDistRange){
                             let angle = leftCells.greenCellVelocity[i].angleBetween(leftCells.redCellVelocity[j]);
-                            //console.log(t,cos(angle),i,j,param.cellMode)
                             tmpScore += cos(angle);
                         }
                     }
@@ -555,7 +557,8 @@ function updateScores(param,cells,side){
 
     }
     
-    param.score = tmpScore/cells.redCellPosition.length;
+    param.score = tmpScore/cells.greenCellPosition.length;
+
 
 }
 
