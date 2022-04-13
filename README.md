@@ -22,16 +22,16 @@
  https://cohock13.github.io/models/car_simulator/a/
  
  ![3](https://user-images.githubusercontent.com/55901554/163255280-6f83ebf7-31ff-45f2-b6f1-80f146f251b3.PNG)
- cで視点切り替えが可能．WAS/矢印キーで進む．
+ cで視点切り替えが可能．WAS/矢印キーで進む．<br>
  右上のGUIから，加速度などの物理情報やキーボードの時系列データを出力する．
  
- # 4. 細胞の移動評価テスト
+ # 4. 質点の移動度評価テスト
  
  https://cohock13.github.io/models/cell-eval-3d/
  
  ![4](https://user-images.githubusercontent.com/55901554/163255315-fb34cc9a-f9a5-41e1-be1f-40f9e84759bb.PNG)
- 研究のプロジェクトでテスト用として用いたシミュレータ．
- 左側はランダムな，右側は赤と緑が沿った動きをする．
+ 研究のプロジェクトでテスト用として用いたシミュレータ．<br>
+ 左側はランダムな，右側は赤と緑が沿った動きをする．<br>
  GUIについてはまだ未整備．
  
  # 5. ミミズの1次元モデル
@@ -39,14 +39,14 @@
  https://cohock13.github.io/models/earthworm/
  
  ![5](https://user-images.githubusercontent.com/55901554/163255339-8de8e676-9ced-4ea3-b2af-5bdcebf164c6.PNG)
- 1次元のバネ-質点系でモデル化したミミズのモデル．
- GUIのRTS(バネの自然長）を調節することによって，身体に波が伝わる．
+ 1次元のバネ-質点系でモデル化したミミズのモデル．<br>
+ rを0以上にしてGUIのRTS(バネの自然長）を調節することによって，身体に波が伝わる．
  
  # 6. 制御工学の2次遅れ系のステップ応答
  
  https://cohock13.github.io/models/system-control-a/
  
  ![6](https://user-images.githubusercontent.com/55901554/163255360-b0822875-f6ec-43b4-b6bc-86c549a71865.PNG)
- 学部の制御工学のTAで作成した二次遅れ系のシミュレータ．
+ 学部の制御工学のTAで作成した二次遅れ系のシミュレータ．<br>
  固有角周波数と減衰比を右上のGUIから調節．
  
