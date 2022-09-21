@@ -192,7 +192,7 @@ function draw(){
   // draw lines
   drawObjects();
 
-  console.log(keyIsDown(keyRedAttack),param.isCollisionRed2Blue,param.isCollisionBlue2Red);
+  //console.log(keyIsDown(keyRedAttack),param.isCollisionRed2Blue,param.isCollisionBlue2Red);
 
 }
 
