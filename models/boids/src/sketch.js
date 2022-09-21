@@ -25,7 +25,7 @@ function parameters(){
 	this.cohesionDistance = 300;
 	this.cohesionAngle = 120;
 
-	this.separationForce = 5;
+	this.separationForce = 3;
 	this.separationDistance = 500;
 
 	this.cohesionDistance = 500;
@@ -35,7 +35,7 @@ function parameters(){
 	this.separationDistance = 300;
 	this.separationAngle = 120;
 
-	this.alignmentForce = 10;
+	this.alignmentForce = 3;
 	this.alignmentDistance = 300;
 	this.alignmentAngle = 120;
 
@@ -70,20 +70,20 @@ function setup(){
 	gui.add(param,"minSpeed",0,1500,10);
 
 	let cohesionControl = gui.addFolder("Cohesion");
-	cohesionControl.add(param,"cohesionForce",0,30,0.1).name("Force");
+	cohesionControl.add(param,"cohesionForce",0,10,0.01).name("Force");
 	cohesionControl.add(param,"cohesionDistance",0,1000,1).name("Distance");
 	cohesionControl.add(param,"cohesionAngle",0,180,1).name("Angle");
 	cohesionControl.open();
 
 	let separationControl = gui.addFolder("Separation");
-	separationControl.add(param,"separationForce",0,30,0.1).name("Force");
+	separationControl.add(param,"separationForce",0,10,0.01).name("Force");
 	separationControl.add(param,"separationDistance",0,1000,1).name("Distance");
 	separationControl.add(param,"separationAngle",0,180,1).name("Angle");
 	separationControl.open();
 
 
 	let alignmentControl = gui.addFolder("Alignment");
-	alignmentControl.add(param,"alignmentForce",0,30,0.1).name("Force");
+	alignmentControl.add(param,"alignmentForce",0,10,0.01).name("Force");
 	alignmentControl.add(param,"alignmentDistance",0,1000,1).name("Distance");
 	alignmentControl.add(param,"alignmentAngle",0,180,1).name("Angle");
 	alignmentControl.open();

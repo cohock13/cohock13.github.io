@@ -20,16 +20,16 @@ function parameters(){
 	this.minSpeed = 500;
 	this.maxSpeed = 2000;
 	
-	this.cohesionForce = 5;
-	this.cohesionDistance = 300;
+	this.cohesionForce = 0.1;
+	this.cohesionDistance = 500;
 	this.cohesionAngle = 120;
 
-	this.separationForce = 5;
-	this.separationDistance = 500;
+	this.separationForce = 0.1;
+	this.separationDistance = 300;
 	this.separationAngle = 120;
 
-	this.alignmentForce = 5;
-	this.alignmentDistance = 600;
+	this.alignmentForce = 0.1;
+	this.alignmentDistance = 300;
 	this.alignmentAngle = 120;
 
 	this.centerAttractMode = true;
@@ -61,24 +61,22 @@ function setup(){
 	gui.add(param,"N",5,500,1);
 	gui.add(param,"maxSpeed",1500,3000,10);
 	gui.add(param,"minSpeed",0,1500,10);
-	gui.add(param,"maxSpeed",1000,2000,10);
-	gui.add(param,"minSpeed",0,1000,10);
 
 	let cohesionControl = gui.addFolder("Cohesion");
-	cohesionControl.add(param,"cohesionForce",0,30,0.1).name("Force");
+	cohesionControl.add(param,"cohesionForce",0,3,0.01).name("Force");
 	cohesionControl.add(param,"cohesionDistance",0,1000,1).name("Distance");
 	cohesionControl.add(param,"cohesionAngle",0,180,1).name("Angle");
 	cohesionControl.open();
 
 	let separationControl = gui.addFolder("Separation");
-	separationControl.add(param,"separationForce",0,30,0.1).name("Force");
+	separationControl.add(param,"separationForce",0,3,0.01).name("Force");
 	separationControl.add(param,"separationDistance",0,1000,1).name("Distance");
 	separationControl.add(param,"separationAngle",0,180,1).name("Angle");
 	separationControl.open();
 
 
 	let alignmentControl = gui.addFolder("Alignment");
-	alignmentControl.add(param,"alignmentForce",0,30,0.1).name("Force");
+	alignmentControl.add(param,"alignmentForce",0,3,0.01).name("Force");
 	alignmentControl.add(param,"alignmentDistance",0,1000,1).name("Distance");
 	alignmentControl.add(param,"alignmentAngle",0,180,1).name("Angle");
 	alignmentControl.open();
@@ -115,7 +113,43 @@ function draw(){
 
 	background(0);
 	drawBoids();
+	//drawBars();
 	updateBoids();
+
+}
+
+
+
+function drawBars(){
+	
+        // xyz axis
+        let axisRadius = 50;
+		let xBoundary = windowWidth/3;
+		let yBoundary = xBoundary;
+		let zBoundary = xBoundary;
+
+        //x
+        push();
+		noStroke();
+        fill(223,32,32);
+        rotateZ(PI/2);
+        cylinder(axisRadius,2*xBoundary);
+        pop();
+
+        //y
+        push();
+		noStroke();
+        fill(32,223,32);
+        cylinder(axisRadius,2*yBoundary);
+        pop();
+
+        //z
+        push();
+		noStroke();
+        fill(32,32,223);
+        rotateX(PI/2);
+        cylinder(axisRadius,2*zBoundary);
+        pop();
 
 }
 
