@@ -40,18 +40,18 @@ function parameters() {
     this.isCollisionBlue2Red = false;
 
     // game settings
-    this.limitForward = 500;
+    this.limitForward = 350;
     this.limitBackward = 200;
 
-    this.startPosition = 300;
+    this.startPosition = 50;
 
     this.deltaAttack = 10;
     this.deltaEvasion = 10;
     this.deltaCollisionATK = 10;
-    this.deltaCollisionRCV = 10;
+    this.deltaCollisionRCV = 25;
     this.deltaResilience = 0.5;
 
-    this.timeCollision = 0.5;
+    this.timeCollision = 0.1;
 
 
 	this.reset_ = function() {
@@ -147,13 +147,13 @@ function setup() {
   deltaGUI.open();
 
   let lengthGUI = gui.addFolder("Length");
-  lengthGUI.add(param,"limitForward",100,1000,50).name("Forward");
-  lengthGUI.add(param,"limitBackward",100,400,50).name("Backward");
-  lengthGUI.add(param,"startPosition",100,700,50).name("Start Pos")
+  lengthGUI.add(param,"limitForward",0,1000,10).name("Forward");
+  lengthGUI.add(param,"limitBackward",0,1000,10).name("Backward");
+  lengthGUI.add(param,"startPosition",0,700,10).name("Start Pos")
   lengthGUI.open();
 
   let timeGUI = gui.addFolder("Action-Time");
-  timeGUI.add(param,"timeCollision",0.1,1.5,0.1).name("Collision");
+  timeGUI.add(param,"timeCollision",0,0.5,0.05).name("Collision");
   timeGUI.open();
 
   let simulationGUI = gui.addFolder("Simulator");
