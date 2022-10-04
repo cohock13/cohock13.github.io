@@ -58,7 +58,7 @@ function parameters() {
     // kinematic model parameters
 
     this.modelMass = 1;
-    this.modelCollisionAmp = 50;
+    this.modelCollisionAmp = 100;
     this.modelCollisionPower = 1;
     this.modelFrictionMu = 0.2;
 
@@ -103,7 +103,7 @@ function init(){
     records.push(["deltaCollisionATK",param.modelCollisionPower]);
     records.push(["modelFrictionMu",param.modelFrictionMu]);
 
-    let index = ["time[s]","redPositionX","redPositionY","bluePositionX","bluePositionY","redInput","blueInput"]; 
+    let index = ["time[s]","redPositionX","redPositionY","redVelocityX","redVelocityY","bluePositionX","bluePositionY","blueVelocityX","blueVelocityY","redInput","blueInput"]; 
     records.push(index);
     // reset position
     redParam.position = createVector(0,param.radiusField/2);
@@ -123,6 +123,7 @@ function centerCanvas() {
 
 function reset(){
 
+    t = 0;
     attemptNum += 1;
     init();
 
@@ -152,7 +153,7 @@ function setup() {
 
   let modelGUI = gui.addFolder("Model");
   modelGUI.add(param,"modelMass",0.1,10,0.1).name("Mass");
-  modelGUI.add(param,"modelCollisionAmp",0,100,0.1).name("Col-Amp");
+  modelGUI.add(param,"modelCollisionAmp",0,200,5).name("Col-Amp");
   modelGUI.add(param,"modelCollisionPower",0,5,1).name("Col-Pow");
   modelGUI.add(param,"modelFrictionMu",0,1,0.1).name("Friction");
   modelGUI.open();
@@ -172,19 +173,19 @@ function setup() {
 
 function draw(){
 
-  t += dt;
-
   // data recording
 
   if(param.isRecording){
+    
 
     let redInputMsg = makeInputMessage(0);
     let blueInputMsg = makeInputMessage(1);
 
     // record : t, pos_red_x, pos_red_y, pos_blue_x, pos_blue_y, input_red, input_blue
-    let record = [t,redParam.position.x,redParam.position.y,blueParam.position.x,blueParam.position.y,redInputMsg,blueInputMsg];
+    let record = [t,redParam.position.x,redParam.position.y,redParam.velocity.x,redParam.velocity.y,blueParam.position.x,blueParam.position.y,blueParam.velocity.x,blueParam.velocity.y,redInputMsg,blueInputMsg];
     records.push(record);
-
+    t += dt;
+    
   }
 
   // flag update
