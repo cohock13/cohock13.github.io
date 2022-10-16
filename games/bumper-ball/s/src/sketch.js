@@ -197,7 +197,7 @@ function draw(){
   // draw lines
   drawObjects();
 
-  console.log(param.isCollision);
+  //console.log(param.isCollision);
 
 }
 
