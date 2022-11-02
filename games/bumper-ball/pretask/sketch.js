@@ -19,6 +19,9 @@ let keyBlueGoDown = 40; //↓
 let keyStartRecording = 32;//space
 let keyReset = 82;      //R
 
+let redPadNum = 0;
+let bluePadNum = 1;
+
 let t = 0;
 
 let redParam,blueParam;
@@ -29,6 +32,12 @@ let attemptNum = 1;
 let records = [];
 
 let maxRecordLength = 1000;
+
+
+// tgt pos
+let idTarget = 0;
+let timeTarget = 0;
+let posisitonTarget = [[0,-0.5],[-0.2,0.3],[0.4,0.4],[-0.5,-0.5],[0.7,0.7],[0.8,0.2],[-0.1,0.9],[0.2,-0.8],[-0.2,-0.8],[0,0.5]];
 
 function playerParam(num){
 
@@ -54,10 +63,14 @@ function parameters() {
     // field settings
 
     this.radiusField = 300;
-    this.radiusPlayer = 100;
+    this.radiusPlayer = 50;
 
     // deltas
     this.deltaForce = 300;
+
+    // target 
+    this.radiusTarget = 50;
+    this.timeTarget = 5;
 
     // kinematic model parameters
 
@@ -69,6 +82,10 @@ function parameters() {
 	this.reset_ = function() {
         reset();
 	}
+
+    this.switchPadNum = function(){
+        [redPadNum,bluePadNum] = [bluePadNum,redPadNum];
+    }
 
     this.exportCSV = function(){
 
@@ -94,6 +111,8 @@ function init(){
     param.isGameFinished = false;
     param.isRedSideWon = false;
     param.isBlueSideWon = false;
+    timeTarget = param.timeTarget;
+    idTarget = 0;
 
     let attemptDate = new Date();
     // append record index
@@ -107,7 +126,7 @@ function init(){
     records.push(["deltaCollisionATK",param.modelCollisionPower]);
     records.push(["modelFrictionMu",param.modelFrictionMu]);
 
-    let index = ["time[s]","redPositionX","redPositionY","redVelocityX","redVelocityY","bluePositionX","bluePositionY","blueVelocityX","blueVelocityY","redInputX","redInputY","blueInputX","blueInputY"]; 
+    let index = ["time[s]","idTarget","redPositionX","redPositionY","redVelocityX","redVelocityY","redInput"]; 
     records.push(index);
     // reset position
     redParam.position = createVector(0,param.radiusField/2);
@@ -151,14 +170,14 @@ function setup() {
   let gui = new dat.GUI();
 
   let radiusGUI = gui.addFolder("Radius");
-  radiusGUI.add(param,"radiusField",0,500,10).name("Field");
+  radiusGUI.add(param,"radiusField",0,1000,10).name("Field");
   radiusGUI.add(param,"radiusPlayer",0,300,10).name("Player");
+  radiusGUI.add(param,"radiusTarget",0,300,10).name("Target");
   radiusGUI.open();
 
   let modelGUI = gui.addFolder("Model");
   modelGUI.add(param,"modelMass",0.1,10,0.1).name("Mass");
   modelGUI.add(param,"modelCollisionAmp",0,200,5).name("Col-Amp");
-  modelGUI.add(param,"modelCollisionPower",0,5,1).name("Col-Pow");
   modelGUI.add(param,"modelFrictionMu",0,1,0.1).name("Friction");
   modelGUI.open();
 
@@ -170,7 +189,12 @@ function setup() {
   simulationGUI.add(param,"inputStyle",["Joystick","WASD"]).name("Input");
   simulationGUI.add(param,"exportCSV").name("Export Data");
   simulationGUI.add(param,"reset_").name("Reset");
+  simulationGUI.add(param,"switchPadNum").name("Switch Pad");
   simulationGUI.open();
+
+  let targetGUI = gui.addFolder("Target");
+  targetGUI.add(param,"timeTarget",0,10,0.5).name("Time");
+  targetGUI.open();
     
   //gui.destroy();
 
@@ -180,18 +204,15 @@ function draw(){
 
   // data recording
 
-
   let pads = navigator.getGamepads();
-  redPad = pads[0];
-  bluePad = pads[1];
+  redPad = pads[redPadNum];
 
   if(param.isRecording){
     
-    //let redInputMsg = makeInputMessage(0);
-    //let blueInputMsg = makeInputMessage(1);
+    let redInputMsg = makeInputMessage(0);
 
     // record : t, pos_red_x, pos_red_y, pos_blue_x, pos_blue_y, input_red, input_blue
-    let record = [t,redParam.position.x,redParam.position.y,redParam.velocity.x,redParam.velocity.y,blueParam.position.x,blueParam.position.y,blueParam.velocity.x,blueParam.velocity.y,redPad.axes[0],redPad.axes[1],bluePad.axes[0],bluePad.axes[1]];
+    let record = [t,idTarget,redParam.position.x,redParam.position.y,redParam.velocity.x,redParam.velocity.y,redInputMsg];
     records.push(record);
     t += dt;
     
@@ -199,10 +220,9 @@ function draw(){
 
   // flag update
   flagUpdate();
-
-  // position update
-  positionUpdate();
   
+  positionUpdate();
+
   // draw lines
   drawObjects();
 
@@ -247,9 +267,6 @@ function makeInputMessage(num){
         if(num == 0){
             resMsg = [redPad.axes[0],redPad.axes[1]];
         }
-        else{
-            resMsg = [bluePad.axes[0],bluePad.axes[1]];
-        }
     }
 
     return resMsg;
@@ -263,18 +280,46 @@ function flagUpdate(){
         param.isRecording = true;
     }
 
-    // 2.1. detect win/lose condition
-
-    // red
+    // 2.1. stage out
     if(redParam.position.mag() > param.radiusField){
         param.isGameFinished = true;            
-        param.isBlueSideWon = true;
         if(param.isRecording){
             param.isRecording = false;
-            records.push(["Blue Won"]);
+            records.push(["Stage Out at "+idTarget.toString()]);
         }
     }
 
+    // 2.2. time out
+    if(t > timeTarget){
+        param.isGameFinished = true;
+        if(param.isRecording){
+            param.isRecording = false;
+            records.push(["Time Out at "+idTarget.toString()]);
+        }
+    }
+
+    // 2.3. next target
+    let vectorTarget = createVector(param.radiusField*posisitonTarget[idTarget][0],param.radiusField*posisitonTarget[idTarget][1]);
+    let distTargetBetPlayer = p5.Vector.sub(redParam.position,vectorTarget).mag();
+    //console.log(distTargetBetPlayer,param.radiusPlayer+param.radiusField);
+
+    if(distTargetBetPlayer < param.radiusPlayer + param.radiusTarget){
+        
+        if(idTarget+1 > posisitonTarget.length){
+            param.isGameFinished = true;
+            idTarget = 0;
+                if(param.isRecording){
+                    param.isRecording = false;
+                    records.push(["Stage clear at t = "+t.toString()]);
+                }      
+        }
+        else{
+            idTarget += 1;
+            timeTarget = t + param.timeTarget;
+        }
+    }
+
+    /*
     // blue
     if(blueParam.position.mag() > param.radiusField){
         param.isGameFinished = true;
@@ -295,6 +340,7 @@ function flagUpdate(){
     else{
         param.isCollision = false;
     }
+    */
 
 
 }
@@ -316,21 +362,13 @@ function positionUpdate(){
     let forceRedFriction = redVelCopy1.mult(-param.modelFrictionMu);
     forceRedPlayer.add(forceRedFriction);
 
-    
-    if(param.isCollision){
-            // blue -> red      
-        let distanceOfPlayers = p5.Vector.sub(redParam.position,blueParam.position).mag();
-        let eigenvectorBlueToRed = p5.Vector.sub(redParam.position,blueParam.position).normalize();
-        let forceRedCollision = eigenvectorBlueToRed.mult((param.radiusPlayer - distanceOfPlayers)*(param.modelCollisionAmp)); 
-        forceRedPlayer.add(forceRedCollision);
-    }
-    
-
     redParam.velocity.add(forceRedPlayer.mult(dt/param.modelMass));
     let redVelCopy2 = redParam.velocity.copy();
     redParam.position.add(redVelCopy2.mult(dt));
    
     //blue
+
+    /*
     let forceInputBluePlayer = calcInputForce(1);
     forceBluePlayer.add(forceInputBluePlayer);
     let blueVelCopy1 = blueParam.velocity.copy();
@@ -348,6 +386,7 @@ function positionUpdate(){
     blueParam.velocity.add(forceBluePlayer.mult(dt));
     let blueVelCopy2 = blueParam.velocity.copy();
     blueParam.position.add(blueVelCopy2.mult(dt));
+    */
 
 }
 
@@ -375,14 +414,6 @@ function calcInputForce(num){
             let resForceX = vectorRight.mult(cutErrorInputs(redPad.axes[0]));
             // y 
             let redForceY = vectorDown.mult(cutErrorInputs(redPad.axes[1]));
-            resForce.add(resForceX);
-            resForce.add(redForceY);
-        }
-        else{
-            // x
-            let resForceX = vectorRight.mult(cutErrorInputs(bluePad.axes[0]));
-            // y 
-            let redForceY = vectorDown.mult(cutErrorInputs(bluePad.axes[1]));
             resForce.add(resForceX);
             resForce.add(redForceY);
         }
@@ -437,22 +468,12 @@ function drawObjects(){
     noStroke();
     textSize(24);
     fill(30);
-    text("Attempt    : "+attemptNum.toString(),20,30);
+    text("Attempt   : "+attemptNum.toString(),20,30);
     text("Recording : "+param.isRecording.toString(),20,60);
+    let timeText = t;
+    text("Time        : "+timeText.toString().slice(0,4),20,90);
     //text("FPS           :"+frameRate().toString(),20,600);
-    
-    let textWinnerMessage = "";
-    let textWinnerColor = "rgb(30,30,30)";
-    if(param.isBlueSideWon){
-        textWinnerMessage = "Blue";
-        textWinnerColor = "rgb(0,0,255)";
-    }
-    else if(param.isRedSideWon){
-        textWinnerMessage = "Red";
-        textWinnerColor = "rgb(255,0,0)";
-    }
-    fill(textWinnerColor);
-    text("Winner      : "+textWinnerMessage,20,90);
+
 
     // center line
     translate(canvasWidth/2,canvasHeight/2);
@@ -463,11 +484,22 @@ function drawObjects(){
 
     // red
     fill(255,0,0);
-    circle(redParam.position.x,redParam.position.y,param.radiusPlayer);
+    circle(redParam.position.x,redParam.position.y,param.radiusPlayer*2);
+
+    // target : circle
+    if(param.isGameFinished == false){
+        fill(0,0,255);
+        circle(param.radiusField*posisitonTarget[idTarget][0],param.radiusField*posisitonTarget[idTarget][1],param.radiusTarget*2);
+    }
+
+
+    // target : timer
 
     // blue
+    /*
     fill(0,0,255);
     circle(blueParam.position.x,blueParam.position.y,param.radiusPlayer);
+    */
 }
 
 function windowResized() {
