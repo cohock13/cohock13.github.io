@@ -5,7 +5,8 @@
  
  https://cohock13.github.io/models/Nagel-Schreckenberg/
  
- ![1](https://user-images.githubusercontent.com/55901554/163255204-2bf925fc-abdd-4f92-b528-8674825107d0.PNG)
+ <img src="https://user-images.githubusercontent.com/55901554/163255204-2bf925fc-abdd-4f92-b528-8674825107d0.PNG" width="300">
+
  交通流のモデルの一つ．<br>
  黒いセルが車に相当し，パラメータによっては渋滞が発生する．
  
