@@ -1,9 +1,6 @@
-# cohock13.github.io
+ # /models 数理モデル<br>
 
-
-## /models 数理モデル<br>
-
- ### Nagel-Schreckenbergモデル
+ ## Nagel-Schreckenbergモデル
  
  https://cohock13.github.io/models/Nagel-Schreckenberg/
  
@@ -12,16 +9,16 @@
  交通流のモデルの一つ．<br>
  黒いセルが車に相当し，パラメータによっては渋滞が発生する．<br>
  
- ### boidモデル
+ ## boidモデル
  
  https://cohock13.github.io/models/boids/
  
   <img src="https://user-images.githubusercontent.com/55901554/163255255-4fe33a59-ec8f-456d-b9c9-c7c43d22969f.PNG" width="500">
 
  boidモデルのシミュレータ．右上のGUIから様々なパラメータを調節可能．<br>
- N~200くらいでカクつくので，計算量改善が課題．<br>
+ 素直にO(N^2)で動かしているので計算量改善が課題．<br>
  
- ### ドライブシミュレータ
+ ## ドライブシミュレータ
  
  https://cohock13.github.io/models/car_simulator/a/
  
@@ -30,17 +27,17 @@
  cで視点切り替えが可能．WAS/矢印キーで操作．<br>
  右上のGUIから，加速度などの物理情報やキーボードの時系列データを出力が可能．<br>
  
- ### 質点の移動度評価テスト
+ ## 質点の移動度評価テスト
  
  https://cohock13.github.io/models/cell-eval-3d/
  
  <img src="https://user-images.githubusercontent.com/55901554/163255315-fb34cc9a-f9a5-41e1-be1f-40f9e84759bb.PNG" width="500">
 
- 研究のプロジェクトでテスト用として用いたシミュレータ．<br>
+ たたき台として作成したシミュレータ．<br>
  左側はランダムな，右側は赤と緑が沿った動きをする．<br>
  GUIは未整備．
  
- ### 1次元ミミズモデル
+ ## 1次元ミミズモデル
  
  https://cohock13.github.io/models/earthworm/
  
@@ -48,9 +45,9 @@
 
  1次元のバネ-質点系でモデル化したミミズのモデル．<br>
  rを0以上にしてGUIのRTS(バネの自然長）を調節することによって，身体に波が伝わる．<br>
- （軸を設定したい）<br>
+ 背景がわかりづらいので軸を置きたい...<br>
  
- ### 2次遅れ系のステップ応答
+ ## 2次遅れ系のステップ応答
  
  https://cohock13.github.io/models/system-control-a/
  
