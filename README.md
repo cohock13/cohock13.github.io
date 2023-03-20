@@ -9,14 +9,14 @@
  交通流のモデルの一つ．<br>
  黒いセルが車に相当し，パラメータによっては渋滞が発生する．<br>
  
- ## boidモデル
+ ## Boidsモデル
  
  https://cohock13.github.io/models/boids/
  
   <img src="https://user-images.githubusercontent.com/55901554/163255255-4fe33a59-ec8f-456d-b9c9-c7c43d22969f.PNG" width="500">
 
- boidモデルのシミュレータ．右上のGUIから様々なパラメータを調節可能．<br>
- 素直にO(N^2)で動かしているので計算量改善が課題．<br>
+ Boidsモデルのシミュレータ．右上のGUIから様々なパラメータを調節可能．<br>
+ 素直にO(N^2)で動かしているので計算量改善が課題．あと軸つける．<br>
  
  ## ドライブシミュレータ
  
