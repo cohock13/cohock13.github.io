@@ -1,0 +1,16 @@
+_site
+.sass-cache
+.DS_Store
+_vendor
+
+
+.bundle
+_assets
+_data
+_includes
+_layouts
+_sass
+gallery
+
+/test/
+/tmp/
