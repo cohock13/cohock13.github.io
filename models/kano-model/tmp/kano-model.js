@@ -26,7 +26,7 @@ function parameters() {
 }
 
 function setup() {
-	createCanvas(windowWidth,windowHeight);
+	createCanvas(windowWidth,windowHeight*0.99);
 	param = new parameters();
 	background(0);
 	init();
@@ -44,7 +44,7 @@ function setup() {
 }
 
 function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
+    resizeCanvas(windowWidth*0.95, windowHeight*0.95);
 }
 
 function mouseWheel(event) {

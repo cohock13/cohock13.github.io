@@ -27,7 +27,7 @@ function parameters() {
 }
 
 function setup() {
-	createCanvas(windowWidth,windowHeight);
+	createCanvas(windowWidth,windowHeight*0.99);
 	param = new parameters();
 	background(0);
 	init();
