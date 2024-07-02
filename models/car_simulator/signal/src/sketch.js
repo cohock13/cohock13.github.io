@@ -11,9 +11,7 @@ function parameters(){
     this.exportCSV = function(){
 
         // output 
-
         let data = records.map((record)=>record.join(',')).join('\r\n');
-         
         let bom  = new Uint8Array([0xEF, 0xBB, 0xBF]);
         let blob = new Blob([bom, data], {type: 'text/csv'});
         let url = (window.URL || window.webkitURL).createObjectURL(blob);
@@ -80,7 +78,6 @@ let hoge = 20;
 function preload(){
 
     carModelData = loadModel('https://cohock13.github.io/models/car_simulator/src/car.obj',true);
-
 	lampModel = loadModel("https://cohock13.github.io/models/car_simulator/test/obj/streetlamp.obj");
 
 }
@@ -99,7 +96,6 @@ function setup(){
 	// ----------------------- GUI Settings ---------------------------------------
 
 	let gui = new dat.GUI();
-
 	let vehicleParameterGUI = gui.addFolder("Speed Parameter");
 	vehicleParameterGUI.add(param,"targetVelocity",0,15,0.2).name("Target Velocity").listen();
 	vehicleParameterGUI.add(param,"speedDeceleration",0,0.2,0.01).name("Friction");
@@ -157,7 +153,6 @@ let operationMessage = "";
 // speed update by keypress and position update
 function updateSpeedsAndPositon(){
 
-	
 	// speed control
 	// 1. speed is 0 when abs speed is too low
 	if(abs(speed) < speedThreshold){
@@ -172,7 +167,6 @@ function updateSpeedsAndPositon(){
 		speed += param.speedDeceleration;
 	}
 	
-
 	// 3. speed has max and min
 	speed = constrain(speed,0,maxSpeed);
 	param.targetVelocity = constrain(param.targetVelocity,0,maxSpeed);
@@ -253,7 +247,6 @@ function drawObjects(){
 	setObjectAndDetectCollision(color('rgb(100,100,100)'),0,-buildingPos,buildingSize,100);
 
 }
-
 
 
 function setObjectModel(model_,color_,scale_,centerX,centerZ,height_,rotate=false){
@@ -458,14 +451,12 @@ function setSignal(posX,posY,signalColor,rotationAngle){
 
 }
 
-
 function mouseReleased(){
 	if(eventflag){
 		recordingTime = time+10;
 		eventflag = false;
 	}
 }
-
 
 // Data Recording
 function recordData(){

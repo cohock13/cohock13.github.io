@@ -345,7 +345,7 @@ function positionUpdate(){
             forceBluePlayer.add(forceBlueCollision);
     }
 
-    blueParam.velocity.add(forceBluePlayer.mult(dt));
+    blueParam.velocity.add(forceBluePlayer.mult(dt/param.modelMass));
     let blueVelCopy2 = blueParam.velocity.copy();
     blueParam.position.add(blueVelCopy2.mult(dt));
 

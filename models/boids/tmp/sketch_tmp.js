@@ -17,23 +17,30 @@ function parameters(){
 	this.color = "rgb(27,232,100)";
 
 	this.N = 100;
-	this.minSpeed = 500;
+	this.minSpeed = 1000;
 	this.maxSpeed = 2000;
 	
-	this.cohesionForce = 0.1;
+	this.cohesionCoefficient = 5;
+
+	this.cohesionDistance = 300;
+	this.cohesionAngle = 120;
+
+	this.separationCoefficient = 3;
+	this.separationDistance = 500;
+
 	this.cohesionDistance = 500;
 	this.cohesionAngle = 120;
 
-	this.separationForce = 0.1;
+	this.separationCoefficient = 3;
 	this.separationDistance = 300;
 	this.separationAngle = 120;
 
-	this.alignmentForce = 0.1;
+	this.alignmentCoefficient = 3;
 	this.alignmentDistance = 300;
 	this.alignmentAngle = 120;
 
 	this.centerAttractMode = true;
-	this.centerAttractForce = 3;
+	this.centerAttractCoefficient = 3;
 
 	this.Reset = function(){
 		init();
@@ -63,27 +70,27 @@ function setup(){
 	gui.add(param,"minSpeed",0,1500,10);
 
 	let cohesionControl = gui.addFolder("Cohesion");
-	cohesionControl.add(param,"cohesionForce",0,3,0.01).name("Force");
+	cohesionControl.add(param,"cohesionCoefficient",0,10,0.01).name("Force");
 	cohesionControl.add(param,"cohesionDistance",0,1000,1).name("Distance");
 	cohesionControl.add(param,"cohesionAngle",0,180,1).name("Angle");
 	cohesionControl.open();
 
 	let separationControl = gui.addFolder("Separation");
-	separationControl.add(param,"separationForce",0,3,0.01).name("Force");
+	separationControl.add(param,"separationCoefficient",0,10,0.01).name("Force");
 	separationControl.add(param,"separationDistance",0,1000,1).name("Distance");
 	separationControl.add(param,"separationAngle",0,180,1).name("Angle");
 	separationControl.open();
 
 
 	let alignmentControl = gui.addFolder("Alignment");
-	alignmentControl.add(param,"alignmentForce",0,3,0.01).name("Force");
+	alignmentControl.add(param,"alignmentCoefficient",0,10,0.01).name("Force");
 	alignmentControl.add(param,"alignmentDistance",0,1000,1).name("Distance");
 	alignmentControl.add(param,"alignmentAngle",0,180,1).name("Angle");
 	alignmentControl.open();
 
 	let centerAttractControl = gui.addFolder("CenterAttract");
 	centerAttractControl.add(param,"centerAttractMode").name("AttractMode");
-	centerAttractControl.add(param,"centerAttractForce",0,30,0.1).name("Force");
+	centerAttractControl.add(param,"centerAttractCoefficient",0,30,0.1).name("Force");
 	//centerAttractControl.open();
 
 	gui.add(param,"Reset");
@@ -113,43 +120,7 @@ function draw(){
 
 	background(0);
 	drawBoids();
-	//drawBars();
 	updateBoids();
-
-}
-
-
-
-function drawBars(){
-	
-        // xyz axis
-        let axisRadius = 50;
-		let xBoundary = windowWidth/3;
-		let yBoundary = xBoundary;
-		let zBoundary = xBoundary;
-
-        //x
-        push();
-		noStroke();
-        fill(223,32,32);
-        rotateZ(PI/2);
-        cylinder(axisRadius,2*xBoundary);
-        pop();
-
-        //y
-        push();
-		noStroke();
-        fill(32,223,32);
-        cylinder(axisRadius,2*yBoundary);
-        pop();
-
-        //z
-        push();
-		noStroke();
-        fill(32,32,223);
-        rotateX(PI/2);
-        cylinder(axisRadius,2*zBoundary);
-        pop();
 
 }
 
@@ -160,10 +131,10 @@ function drawBoids(){
 }
 
 function updateBoids(){	
-	let tmpForce = [];
+	let boidsForce = [];
 	//tmpForceの初期化
 	for(let i = 0; i < n ; ++i){
-		tmpForce[i] = createVector(0,0,0);
+		boidsForce[i] = createVector(0,0,0);
 	}
 	
 	for(let i = 0; i < n ; ++i){
@@ -218,8 +189,8 @@ function updateBoids(){
 			}
 			cohesionForceVector.mult(1/cohesion.length);
 			cohesionForceVector.sub(pos1);
-			cohesionForceVector.mult(param.cohesionForce);
-			tmpForce[i].add(cohesionForceVector);
+			cohesionForceVector.mult(param.cohesionCoefficient);
+			boidsForce[i].add(cohesionForceVector);
 		}
 
 		//Separation
@@ -230,8 +201,8 @@ function updateBoids(){
 				let hoge = separation[i].mult(tmp);
 				separationForceVector.add(hoge);
 			}
-			separationForceVector.mult(param.separationForce);
-			tmpForce[i].add(separationForceVector);
+			separationForceVector.mult(param.separationCoefficient);
+			boidsForce[i].add(separationForceVector);
 		}
 
 		//Alignment
@@ -242,8 +213,8 @@ function updateBoids(){
 			}
 			alignmentForceVector.mult(1/alignment.length);
 			alignmentForceVector.sub(vel1);
-			alignmentForceVector.mult(param.alignmentForce);
-			tmpForce[i].add(alignmentForceVector);
+			alignmentForceVector.mult(param.alignmentCoefficient);
+			boidsForce[i].add(alignmentForceVector);
 
 			
 		}
@@ -253,7 +224,7 @@ function updateBoids(){
 			let centerAttractForceVector = createVector(0,0,0);
 			centerAttractForceVector.add(pos1);
 			centerAttractForceVector.mult(pos1.mag()-windowWidth/6).mult(-3).div(pos1.mag());
-			tmpForce[i].add(centerAttractForceVector);
+			boidsForce[i].add(centerAttractForceVector);
 		}
 
 		//Click
@@ -262,8 +233,8 @@ function updateBoids(){
 	
 
 	for(let i = 0 ; i < n ; ++i){
-		//boids[i].updatePosition(tmpForce[i]);
-		boids[i].updatePosition(tmpForce[i]);
+		//boids[i].updatePosition(boidsForce[i]);
+		boids[i].updatePosition(boidsForce[i]);
 		boids[i].limitVelocity();
 	}
 	
@@ -275,14 +246,14 @@ class boid {
 	
 	constructor(){
 
-		let max = param.maxSpeed;
+		let maxSpeed = param.maxSpeed;
 		this.pos = createVector(random(-windowWidth,windowWidth),random(-windowWidth,windowWidth),random(-windowWidth,windowWidth));
-		this.vel = createVector(random(-max,max),random(-max,max),random(-max,max));
+		this.vel = createVector(random(-maxSpeed,maxSpeed),random(-maxSpeed,maxSpeed),random(-maxSpeed,maxSpeed));
 
 	}
 
 	updatePosition(forceVector){
-		console.log(this.vel);
+		//console.log(this.vel);
 		this.vel.add(forceVector.mult(dt));
 		this.pos.add(this.vel.mult(dt));
 	}

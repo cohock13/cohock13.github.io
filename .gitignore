@@ -12,5 +12,5 @@ _layouts
 _sass
 gallery
 
-/test/
-/tmp/
+**/test/
+**/tmp/

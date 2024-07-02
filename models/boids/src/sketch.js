@@ -1,298 +1,289 @@
-/* Special Thanks
-https://p5js.org/reference/#content
-https://www.openprocessing.org/sketch/385960
-https://www.dynamicmath.xyz/#about
-
-*/
-
-let easycam,param;
+let easycam, param;
 let boids = [];
 let n;
 
-//刻み幅
-let dt = 0.005;
+// 刻み幅
+let defaultFrameRate = 60;
+let dt = 1 / defaultFrameRate;
 
-function parameters(){
+function setup() {
 
-	this.color = "rgb(27,232,100)";
+    createCanvas(windowWidth, windowHeight, WEBGL);
+    setAttributes("antialias", true);
 
-	this.N = 100;
-	this.minSpeed = 1000;
-	this.maxSpeed = 2000;
-	
-	this.cohesionForce = 5;
+    easycam = createEasyCam({ distance: windowWidth });
+    console.log(Dw.EasyCam.INFO);
 
-	this.cohesionDistance = 300;
-	this.cohesionAngle = 120;
+    param = {
+      color: "rgb(27,232,100)",
+      N: 150,
+      minSpeed: 300,
+      maxSpeed: 500,
+      cohesionCoefficient: 0.3,
+      cohesionDistance: 500,
+      cohesionAngle: 180,
+      separationCoefficient: 1.0,
+      separationDistance: 300,
+      separationAngle: 120,
+      alignmentCoefficient: 0.5,
+      alignmentDistance: 200,
+      alignmentAngle: 90,
+      boundaryMode: "centerAttract", // "centerAttract" or "periodicBoundary"
+      centerAttractCoefficient: 1.0,
+      showAxes: true,
+      showBoundary: true,
+  
+      Reset: function() {
+        init();
+      }
+    };
 
-	this.separationForce = 3;
-	this.separationDistance = 500;
+    lilGUI();
+    pixelDensity(1);
+    angleMode(DEGREES);
+    init();
 
-	this.cohesionDistance = 500;
-	this.cohesionAngle = 120;
+  }
+  
+  function lilGUI() {
 
-	this.separationForce = 3;
-	this.separationDistance = 300;
-	this.separationAngle = 120;
+    const gui = new lil.GUI({autoplace: false});
+  
+    let displayFolder = gui.addFolder("Display");
+    displayFolder.add(param, "showAxes").name("XYZ Axes");
+    displayFolder.add(param, "showBoundary").name("Periodic Boundary");
 
-	this.alignmentForce = 3;
-	this.alignmentDistance = 300;
-	this.alignmentAngle = 120;
+    let boidsFolder = gui.addFolder("Boids Parameters");
+    boidsFolder.addColor(param, "color").name("Body Color");
+    boidsFolder.add(param, "N", 5, 300, 10).name("Number of Boids");
+    boidsFolder.add(param, "maxSpeed", 100, 1000, 10).name("Max Speed");
+    boidsFolder.add(param, "minSpeed", 0, 500, 10).name("Min Speed");
+    boidsFolder.add(param, "boundaryMode", ["centerAttract","periodicBoundary"]);
 
-	this.centerAttractMode = true;
-	this.centerAttractForce = 3;
+    let cohesionFolder = boidsFolder.addFolder("Cohesion");
+    cohesionFolder.add(param, "cohesionCoefficient", 0, 2, 0.1).name("Strength");
+    cohesionFolder.add(param, "cohesionDistance", 0, 1000, 10).name("Distance");
+    cohesionFolder.add(param, "cohesionAngle", 0, 180, 5).name("Angle");
+  
+    let separationFolder = boidsFolder.addFolder("Separation");
+    separationFolder.add(param, "separationCoefficient", 0, 2, 0.1).name("Strength");
+    separationFolder.add(param, "separationDistance", 0, 1000, 10).name("Distance");
+    separationFolder.add(param, "separationAngle", 0, 180, 5).name("Angle");
+  
+    let alignmentFolder = boidsFolder.addFolder("Alignment");
+    alignmentFolder.add(param, "alignmentCoefficient", 0, 1, 0.1).name("Strength");
+    alignmentFolder.add(param, "alignmentDistance", 0, 1000, 10).name("Distance");
+    alignmentFolder.add(param, "alignmentAngle", 0, 180, 5).name("Angle");
 
-	this.Reset = function(){
-		init();
-	};
-	
-}
+    let centerAttractFolder = boidsFolder.addFolder("CenterAttract");
+    centerAttractFolder.add(param, "centerAttractCoefficient", 0, 1.5, 0.1).name("Strength");
+  
+    gui.add(param, "Reset");
+    gui.open();
 
+  }
 
-function setup(){
-
-	//Canvas周辺
-	createCanvas(windowWidth,windowHeight,WEBGL);
-	setAttributes("antialias",true);
-
-	easycam = createEasyCam({distance:windowWidth});
-	document.oncontextmenu = function() { return false; }
-	document.onmousedown   = function() { return false; }
-	console.log(Dw.EasyCam.INFO);
-
-	//GUI関連
-	param = new parameters();
-	let gui = new dat.GUI();
-
-	gui.addColor(param,"color");
-	gui.add(param,"N",5,500,1);
-	gui.add(param,"maxSpeed",1500,3000,10);
-	gui.add(param,"minSpeed",0,1500,10);
-
-	let cohesionControl = gui.addFolder("Cohesion");
-	cohesionControl.add(param,"cohesionForce",0,10,0.01).name("Force");
-	cohesionControl.add(param,"cohesionDistance",0,1000,1).name("Distance");
-	cohesionControl.add(param,"cohesionAngle",0,180,1).name("Angle");
-	cohesionControl.open();
-
-	let separationControl = gui.addFolder("Separation");
-	separationControl.add(param,"separationForce",0,10,0.01).name("Force");
-	separationControl.add(param,"separationDistance",0,1000,1).name("Distance");
-	separationControl.add(param,"separationAngle",0,180,1).name("Angle");
-	separationControl.open();
-
-
-	let alignmentControl = gui.addFolder("Alignment");
-	alignmentControl.add(param,"alignmentForce",0,10,0.01).name("Force");
-	alignmentControl.add(param,"alignmentDistance",0,1000,1).name("Distance");
-	alignmentControl.add(param,"alignmentAngle",0,180,1).name("Angle");
-	alignmentControl.open();
-
-	let centerAttractControl = gui.addFolder("CenterAttract");
-	centerAttractControl.add(param,"centerAttractMode").name("AttractMode");
-	centerAttractControl.add(param,"centerAttractForce",0,30,0.1).name("Force");
-	//centerAttractControl.open();
-
-	gui.add(param,"Reset");
-
-	pixelDensity(1);
-	angleMode(DEGREES);
-	init();
-
-}
-
-function init(){
-
-	n = param.N;
-
-	for(let i = 0 ; i < n; ++i){
-		boids[i] = new boid();
-	}
+function init() {
+  n = param.N;
+  boids = [];
+  for (let i = 0; i < n; ++i) {
+    boids[i] = new boid();
+  }
 }
 
 function windowResized() {
-	resizeCanvas(windowWidth, windowHeight);
-	easycam.setViewport([0,0,windowWidth, windowHeight]);
+  resizeCanvas(windowWidth, windowHeight);
+  easycam.setViewport([0, 0, windowWidth, windowHeight]);
 }
 
+function draw() {
+  background(0);
+  if (param.showAxes) {
+    drawAxes();
+  }
+  drawBoids();
+  updateBoids();
+}
 
-function draw(){
+function drawAxes() {
 
-	background(0);
-	drawBoids();
-	updateBoids();
+  let lineLength = windowWidth/6;
+  push();
+  strokeWeight(5);
+  // X軸
+  stroke(255, 0, 0); // 赤色
+  line(0, 0, 0, lineLength, 0, 0);
+  // Y軸
+  stroke(0, 255, 0); // 緑色
+  line(0, 0, 0, 0, lineLength, 0);
+  // Z軸
+  stroke(0, 0, 255); // 青色
+  line(0, 0, 0, 0, 0, lineLength);
+  pop();
+
+  if (param.boundaryMode === "periodicBoundary" && param.showBoundary) {
+    drawPeriodicBoundary();
+  }
 
 }
 
-function drawBoids(){
-	for(let i = 0 ; i < n ; ++i){
-		boids[i].drawBody();
-	}
-}
+function drawPeriodicBoundary() {
 
-function updateBoids(){	
-	let tmpForce = [];
-	//tmpForceの初期化
-	for(let i = 0; i < n ; ++i){
-		tmpForce[i] = createVector(0,0,0);
-	}
-	
-	for(let i = 0; i < n ; ++i){
-		
-		let cohesion = [];
-		let separation = [];
-		let alignment = [];
-		//click = [];
-
-		let pos1 = boids[i].copyPosition();
-		let vel1 = boids[i].copyVelocity();
-
-		
-		
-		//候補抜粋 
-		for(let j = 0; j < n ; ++j){
-
-			let pos2 = boids[j].copyPosition();
-			let vel2 = boids[j].copyVelocity();
-			
-			if(i !== j){
-
-				let distance = pos1.dist(pos2);
-				let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2,pos1)));
-				
-				//Cohesion
-				if(distance <= param.cohesionDistance && angle <= param.cohesionAngle){
-					cohesion.push(pos2);
-				}
-
-				//Separation
-				if(distance <= param.separationDistance && angle <= param.separationAngle){
-					separation.push(p5.Vector.sub(pos1,pos2));
-				}
-
-				//Alignment
-				if(distance <= param.alignmentDistance && angle <= param.alignmentAngle){
-					alignment.push(vel2);
-				}
-				
-				//Click(Attract or Repel)
-				
-			}
-			
-		}
-		
-		//Cohesion
-		if(cohesion.length > 0){
-			let cohesionForceVector = createVector(0,0,0);
-			for(let i = 0 ; i < cohesion.length ; ++i){
-				cohesionForceVector.add(cohesion[i]);
-			}
-			cohesionForceVector.mult(1/cohesion.length);
-			cohesionForceVector.sub(pos1);
-			cohesionForceVector.mult(param.cohesionForce);
-			tmpForce[i].add(cohesionForceVector);
-		}
-
-		//Separation
-		if(separation.length > 0){
-			let separationForceVector = createVector(0,0,0);
-			for(let i = 0 ; i < separation.length ; ++i){
-				let tmp = 10/separation[i].mag();
-				let hoge = separation[i].mult(tmp);
-				separationForceVector.add(hoge);
-			}
-			separationForceVector.mult(param.separationForce);
-			tmpForce[i].add(separationForceVector);
-		}
-
-		//Alignment
-		if(alignment.length > 0){
-			alignmentForceVector = createVector(0,0,0);
-			for(let i = 0 ; i < alignment.length ; ++i){
-				alignmentForceVector.add(alignment[i]);
-			}
-			alignmentForceVector.mult(1/alignment.length);
-			alignmentForceVector.sub(vel1);
-			alignmentForceVector.mult(param.alignmentForce);
-			tmpForce[i].add(alignmentForceVector);
-
-			
-		}
-		
-		//CenterForce
-		if(param.centerAttractMode){
-			let centerAttractForceVector = createVector(0,0,0);
-			centerAttractForceVector.add(pos1);
-			centerAttractForceVector.mult(pos1.mag()-windowWidth/6).mult(-3).div(pos1.mag());
-			tmpForce[i].add(centerAttractForceVector);
-		}
-
-		//Click
-		
-	}
-	
-
-	for(let i = 0 ; i < n ; ++i){
-		//boids[i].updatePosition(tmpForce[i]);
-		boids[i].updatePosition(tmpForce[i]);
-		boids[i].limitVelocity();
-	}
-	
-		
+  push();
+  strokeWeight(6);
+  noFill();
+  
+  // 立方体の外枠描画
+  stroke(50); 
+  let halfWidth = windowWidth / 2;
+  let halfHeight = windowWidth / 2;
+  let halfDepth = windowWidth / 2;
+  
+  line(-halfWidth, -halfHeight, -halfDepth, halfWidth, -halfHeight, -halfDepth);
+  line(halfWidth, -halfHeight, -halfDepth, halfWidth, -halfHeight, halfDepth);
+  line(halfWidth, -halfHeight, halfDepth, -halfWidth, -halfHeight, halfDepth);
+  line(-halfWidth, -halfHeight, halfDepth, -halfWidth, -halfHeight, -halfDepth);
+  line(-halfWidth, halfHeight, -halfDepth, halfWidth, halfHeight, -halfDepth);
+  line(halfWidth, halfHeight, -halfDepth, halfWidth, halfHeight, halfDepth);
+  line(halfWidth, halfHeight, halfDepth, -halfWidth, halfHeight, halfDepth);
+  line(-halfWidth, halfHeight, halfDepth, -halfWidth, halfHeight, -halfDepth);
+  line(-halfWidth, -halfHeight, -halfDepth, -halfWidth, halfHeight, -halfDepth);
+  line(halfWidth, -halfHeight, -halfDepth, halfWidth, halfHeight, -halfDepth);
+  line(halfWidth, -halfHeight, halfDepth, halfWidth, halfHeight, halfDepth);
+  line(-halfWidth, -halfHeight, halfDepth, -halfWidth, halfHeight, halfDepth);
+  
+  pop();
 
 }
+
+function drawBoids() {
+
+  for (let i = 0; i < n; ++i) {
+    boids[i].drawBody();
+  }
+
+}
+
+function updateBoids() {
+
+  let boidsForceVector = Array(n).fill().map(() => createVector(0, 0, 0));
+
+  for (let i = 0; i < n; ++i) {
+    let pos1 = boids[i].pos;
+    let vel1 = boids[i].vel;
+    let cohesionForceVector = createVector(0, 0, 0);
+    let separationForceVector = createVector(0, 0, 0);
+    let alignmentForceVector = createVector(0, 0, 0);
+    let cohesionCount = 0, separationCount = 0, alignmentCount = 0;
+
+    for (let j = 0; j < n; ++j) {
+      if (i !== j) {
+        let pos2 = boids[j].pos;
+        let vel2 = boids[j].vel;
+        
+        let distance = pos1.dist(pos2);
+        let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2, pos1)));
+
+        if (distance <= param.cohesionDistance && angle <= param.cohesionAngle) {
+          cohesionForceVector.add(pos2);
+          cohesionCount++;
+        }
+        if (distance <= param.separationDistance && angle <= param.separationAngle) {
+          separationForceVector.add(p5.Vector.sub(pos1, pos2).mult(1 / distance));
+          separationCount++;
+        }
+        if (distance <= param.alignmentDistance && angle <= param.alignmentAngle) {
+          alignmentForceVector.add(vel2);
+          alignmentCount++;
+        }
+      }
+    }
+
+    if (cohesionCount > 0) {
+      cohesionForceVector.div(cohesionCount).sub(pos1).mult(param.cohesionCoefficient);
+      boidsForceVector[i].add(cohesionForceVector);
+    }
+
+    if (separationCount > 0) {
+      separationForceVector.mult(param.separationCoefficient);
+      boidsForceVector[i].add(separationForceVector);
+    }
+
+    if (alignmentCount > 0) {
+      alignmentForceVector.div(alignmentCount).sub(vel1).mult(param.alignmentCoefficient);
+      boidsForceVector[i].add(alignmentForceVector);
+    }
+
+    if (param.boundaryMode === "centerAttract") {
+      let attractSphereRadius = windowWidth / 4;
+      let centerAttractForceVector = pos1.copy().mult(pos1.mag() - attractSphereRadius).mult(-3).div(pos1.mag());
+      boidsForceVector[i].add(centerAttractForceVector);
+    }
+  }
+
+  for (let i = 0; i < n; ++i) {
+    boids[i].updatePosition(boidsForceVector[i]);
+    boids[i].limitVelocity();
+    if (param.boundaryMode === "periodicBoundary") {
+      boids[i].applyPeriodicBoundary();
+    }
+  }
+}
+
 
 class boid {
-	
-	constructor(){
 
-		let max = param.maxSpeed;
-		this.pos = createVector(random(-windowWidth,windowWidth),random(-windowWidth,windowWidth),random(-windowWidth,windowWidth));
-		this.vel = createVector(random(-max,max),random(-max,max),random(-max,max));
+  constructor() {
+    let maxSpeed = param.maxSpeed;
+    let initialMaxPosition = windowWidth;
+    this.pos = createVector(random(-initialMaxPosition, initialMaxPosition),
+                            random(-initialMaxPosition, initialMaxPosition),
+                            random(-initialMaxPosition, initialMaxPosition));
+    this.vel = createVector(random(-maxSpeed, maxSpeed), random(-maxSpeed, maxSpeed), random(-maxSpeed, maxSpeed));
+  }
 
-	}
+  updatePosition(forceVector) {
+    this.vel.add(forceVector.mult(dt));
+    this.pos.add(this.vel.copy().mult(dt));
+  }
 
-	updatePosition(forceVector){
-		//console.log(this.vel);
-		this.vel.add(forceVector.mult(dt));
-		this.pos.add(this.vel.mult(dt));
-	}
+  limitVelocity() {
+    if (this.vel.mag() < param.minSpeed) {
+      this.vel.normalize();
+      this.vel.mult(param.minSpeed);
+    }
+    if (this.vel.mag() > param.maxSpeed) {
+      this.vel.normalize();
+      this.vel.mult(param.maxSpeed);
+    }
+  }
 
-	copyPosition(){
-		return this.pos.copy();
-	}
+  applyPeriodicBoundary() {
+    if (this.pos.x > windowWidth / 2) this.pos.x -= windowWidth;
+    if (this.pos.x < -windowWidth / 2) this.pos.x += windowWidth;
+    if (this.pos.y > windowWidth / 2) this.pos.y -= windowWidth;
+    if (this.pos.y < -windowWidth / 2) this.pos.y += windowWidth;
+    if (this.pos.z > windowWidth / 2) this.pos.z -= windowWidth;
+    if (this.pos.z < -windowWidth / 2) this.pos.z += windowWidth;
+  }
 
-	copyVelocity(){
-		return this.vel.copy();
-	}
+  drawBody() {
+    push();
+    translate(this.pos.x, this.pos.y, this.pos.z);
+    fill(param.color);
+    noStroke();
+    let angleY = atan2(this.vel.x, this.vel.z) + 90;
+    let angleZ = atan2(this.vel.y, this.vel.x) + 90;
+    rotateZ(angleZ);
+    rotateY(angleY);
 
-	limitVelocity(){
+    let boidSize = 10;
+    beginShape(TRIANGLES);
+    vertex(0, -2*boidSize, 0);
+    vertex(-boidSize, 2*boidSize, 0);
+    vertex(boidSize, 2*boidSize, 0);
+    endShape();
+    pop();
+  }
 
-		if(this.vel.mag() < param.minSpeed){
-			this.vel.normalize();
-			this.vel.mult(param.minSpeed);
-		}
-		if(this.vel.mag() > param.maxSpeed){
-			this.vel.normalize();
-			this.vel.mult(param.maxSpeed);
-		}
-	}
-
-	drawBody(){
-		push();
-		translate(this.pos.x,this.pos.y,this.pos.z);
-		fill(param.color);
-		//向きの計算(3次元極座標)
-		let angleY = atan2(this.vel.x,this.vel.z)+90;
-		let angleZ = atan2(this.vel.y,this.vel.x)+90;
-		rotateZ(angleZ);
-		rotateY(angleY);
-		//cone(10,30);
-		beginShape(TRIANGLES);
-		vertex(0,-20*2,0);
-		vertex(-20,20*2,0);
-		vertex(20,20*2,0);
-		endShape();
-		pop();
-	}
 }
