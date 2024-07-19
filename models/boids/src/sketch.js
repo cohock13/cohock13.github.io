@@ -17,6 +17,7 @@ function setup() {
     param = {
       color: "rgb(27,232,100)",
       N: 150,
+      size: 10,
       minSpeed: 300,
       maxSpeed: 500,
       cohesionCoefficient: 0.3,
@@ -53,11 +54,12 @@ function setup() {
     displayFolder.add(param, "showAxes").name("XYZ Axes");
     displayFolder.add(param, "showBoundary").name("Periodic Boundary");
 
-    let boidsFolder = gui.addFolder("Boids Parameters");
-    boidsFolder.addColor(param, "color").name("Body Color");
-    boidsFolder.add(param, "N", 5, 300, 10).name("Number of Boids");
-    boidsFolder.add(param, "maxSpeed", 100, 1000, 10).name("Max Speed");
-    boidsFolder.add(param, "minSpeed", 0, 500, 10).name("Min Speed");
+    let boidsFolder = gui.addFolder("Model parameters");
+    boidsFolder.addColor(param, "color").name("Body color");
+    boidsFolder.add(param, "N", 5, 300, 10).name("Number of boids");
+    boidsFolder.add(param,"size",3, 20, 1).name("Size of boids");
+    boidsFolder.add(param, "maxSpeed", 100, 1000, 10).name("Max speed");
+    boidsFolder.add(param, "minSpeed", 0, 500, 10).name("Min speed");
     boidsFolder.add(param, "boundaryMode", ["centerAttract","periodicBoundary"]);
 
     let cohesionFolder = boidsFolder.addFolder("Cohesion");
@@ -110,14 +112,14 @@ function drawAxes() {
   let lineLength = windowWidth/6;
   push();
   strokeWeight(5);
-  // X軸
-  stroke(255, 0, 0); // 赤色
+
+  stroke(255, 0, 0);
   line(0, 0, 0, lineLength, 0, 0);
-  // Y軸
-  stroke(0, 255, 0); // 緑色
+
+  stroke(0, 255, 0); 
   line(0, 0, 0, 0, lineLength, 0);
-  // Z軸
-  stroke(0, 0, 255); // 青色
+
+  stroke(0, 0, 255);
   line(0, 0, 0, 0, 0, lineLength);
   pop();
 
@@ -135,9 +137,9 @@ function drawPeriodicBoundary() {
   
   // 立方体の外枠描画
   stroke(50); 
-  let halfWidth = windowWidth / 2;
-  let halfHeight = windowWidth / 2;
-  let halfDepth = windowWidth / 2;
+  let halfWidth = windowWidth/2;
+  let halfHeight = windowWidth/2;
+  let halfDepth = windowWidth/2;
   
   line(-halfWidth, -halfHeight, -halfDepth, halfWidth, -halfHeight, -halfDepth);
   line(halfWidth, -halfHeight, -halfDepth, halfWidth, -halfHeight, halfDepth);
@@ -158,8 +160,8 @@ function drawPeriodicBoundary() {
 
 function drawBoids() {
 
-  for (let i = 0; i < n; ++i) {
-    boids[i].drawBody();
+  for (let boid of boids) {
+    boid.drawBody();
   }
 
 }
@@ -181,7 +183,8 @@ function updateBoids() {
         let pos2 = boids[j].pos;
         let vel2 = boids[j].vel;
         
-        let distance = pos1.dist(pos2);
+        //let distance = pos1.dist(pos2);
+        let distance = max(pos1.dist(pos2) - 2*param.size, 0.01);
         let angle = abs(vel1.angleBetween(p5.Vector.sub(pos2, pos1)));
 
         if (distance <= param.cohesionDistance && angle <= param.cohesionAngle) {
@@ -277,11 +280,10 @@ class boid {
     rotateZ(angleZ);
     rotateY(angleY);
 
-    let boidSize = 10;
     beginShape(TRIANGLES);
-    vertex(0, -2*boidSize, 0);
-    vertex(-boidSize, 2*boidSize, 0);
-    vertex(boidSize, 2*boidSize, 0);
+    vertex(0, -2*param.size, 0);
+    vertex(-param.size, 2*param.size, 0);
+    vertex(param.size, 2*param.size, 0);
     endShape();
     pop();
   }
