@@ -42,6 +42,7 @@ export class OilTimer {
         this.deviceGravity = { x: 0, y: 0.7 };
         this.isDeviceOrientationEnabled = false;
         this.isMobileDevice = this.checkIfMobile();
+        this.deviceFlipState = false; // スマホの向きに基づく反転状態
         
         // Performance tracking
         this.frameCount = 0;
@@ -62,7 +63,7 @@ export class OilTimer {
         // Liquid effect parameters
         this.liquidParams = {
             blurRadius: 7.5,
-            threshold: 15,
+            threshold: 20,
             sharpness: 3
         };
         
@@ -137,6 +138,8 @@ export class OilTimer {
         // Setup device orientation for mobile
         if (this.isMobileDevice) {
             this.setupDeviceOrientation();
+            // Set initial stairs state for mobile
+            this.switchStairsForOrientation();
         }
     }
     
@@ -182,6 +185,17 @@ export class OilTimer {
         const beta = event.beta || 0;   // -180 to 180 degrees
         const gamma = event.gamma || 0; // -90 to 90 degrees
         
+        // Determine device flip state based on orientation
+        // デバイスの向きから反転状態を判断（上向き/下向き）
+        const wasFlipped = this.deviceFlipState;
+        this.deviceFlipState = Math.abs(beta) > 90; // 90度以上で反転状態
+        
+        // If flip state changed, switch stairs like PC version
+        if (wasFlipped !== this.deviceFlipState) {
+            this.switchStairsForOrientation();
+            console.log('📱 Device flipped:', this.deviceFlipState ? 'Upside down (inverted stairs active)' : 'Right side up (normal stairs active)');
+        }
+        
         // Convert orientation to gravity vector
         // Normalize beta and gamma to reasonable ranges for gravity
         const maxTilt = 45; // degrees
@@ -206,7 +220,8 @@ export class OilTimer {
                 gamma: gamma.toFixed(1),
                 gravityX: this.deviceGravity.x.toFixed(3),
                 gravityY: this.deviceGravity.y.toFixed(3),
-                isEnabled: this.isDeviceOrientationEnabled
+                isEnabled: this.isDeviceOrientationEnabled,
+                isFlipped: this.deviceFlipState
             });
             this.lastDebugTime = Date.now();
         }
@@ -236,6 +251,50 @@ export class OilTimer {
             });
             this.lastMotionDebugTime = Date.now();
         }
+    }
+    
+    switchStairsForOrientation() {
+        // モバイルでの階段切り替え処理
+        // deviceFlipState: false = 正位置 (通常の階段), true = 逆位置 (反転階段)
+        this.staticBodies.forEach(body => {
+            if (body.isInverted !== undefined) {
+                if (this.deviceFlipState) {
+                    // Device upside down (逆位置): use inverted plates for physics
+                    if (body.isInverted) {
+                        // Inverted plates: enable physics, show as white
+                        body.render.visible = false;
+                        body.collisionFilter.mask = 0x0001; // Enable physics collision
+                    } else {
+                        // Normal plates: disable physics, show as gray
+                        body.render.visible = false;
+                        body.collisionFilter.mask = 0x0000; // Disable physics collision
+                    }
+                } else {
+                    // Device right side up (正位置): use normal plates for physics
+                    if (body.isInverted) {
+                        // Inverted plates: disable physics, show as gray
+                        body.render.visible = false;
+                        body.collisionFilter.mask = 0x0000; // Disable physics collision
+                    } else {
+                        // Normal plates: enable physics, show as white
+                        body.render.visible = false;
+                        body.collisionFilter.mask = 0x0001; // Enable physics collision
+                    }
+                }
+            }
+        });
+        
+        // Add some impulse to particles when switching
+        this.particles.forEach(particle => {
+            const impulse = {
+                x: (Math.random() - 0.5) * 0.02,
+                y: this.deviceFlipState ? -0.02 : 0.02
+            };
+            Matter.Body.applyForce(particle, particle.position, impulse);
+        });
+        
+        // Update glass display
+        this.renderGlassStructure();
     }
     
     updateLiquidFilter() {
@@ -278,7 +337,7 @@ export class OilTimer {
         physicsFolder.add(this.params, 'particleCount', 10, 150, 10).name('粒子数').onChange(() => {
             this.createOilParticles();
         });
-        physicsFolder.open();
+        physicsFolder.close();
         
         // Liquid effect controls
         const liquidFolder = gui.addFolder('流体表現');
@@ -288,18 +347,18 @@ export class OilTimer {
         liquidFolder.add(this.liquidParams, 'blurRadius', 0, 10, 0.5).name('ブラー半径').onChange(() => {
             this.updateLiquidFilter();
         });
-        liquidFolder.add(this.liquidParams, 'threshold', 0, 20, 1).name('結合閾値').onChange(() => {
+        liquidFolder.add(this.liquidParams, 'threshold', 0, 30, 1).name('結合閾値').onChange(() => {
             this.updateLiquidFilter();
         });
         liquidFolder.add(this.liquidParams, 'sharpness', 0, 5, 0.5).name('シャープネス').onChange(() => {
             this.updateLiquidFilter();
         });
-        liquidFolder.open();
+        liquidFolder.close();
         
         // Visual controls
         const visualFolder = gui.addFolder('視覚効果');
         visualFolder.addColor(this.params, 'oilColor').name('オイル色');
-        visualFolder.open();
+        visualFolder.close();
         
         // Control buttons
         const controlFolder = gui.addFolder('制御');
@@ -313,9 +372,9 @@ export class OilTimer {
             controlFolder.add(this, 'toggleDeviceOrientation').name('加速度センサー');
         }
         
-        controlFolder.open();
+        controlFolder.close();
         
-        gui.open();
+        gui.close();
     }
     
     createWorld() {
@@ -544,7 +603,10 @@ export class OilTimer {
     
     renderGlassBody(body) {
         // Check if this body should be rendered as gray (inactive)
-        const isInactive = (this.isFlipped && !body.isInverted) || (!this.isFlipped && body.isInverted);
+        // モバイルではdeviceFlipState、PC/タブレットではisFlippedを使用
+        const currentFlipState = this.isMobileDevice && this.isDeviceOrientationEnabled ? 
+            this.deviceFlipState : this.isFlipped;
+        const isInactive = (currentFlipState && !body.isInverted) || (!currentFlipState && body.isInverted);
         
         // Glass appearance - white for active, dark gray for inactive
         if (isInactive && body.isInverted !== undefined) {
@@ -706,8 +768,11 @@ export class OilTimer {
         if (this.isMobileDevice) {
             if (this.isDeviceOrientationEnabled) {
                 this.isDeviceOrientationEnabled = false;
-                // Reset to default gravity when disabled
+                // Reset to default gravity and flip state when disabled
                 this.deviceGravity = { x: 0, y: this.params.gravity };
+                this.deviceFlipState = false;
+                // Reset stairs to normal state
+                this.switchStairsForOrientation();
             } else {
                 this.setupDeviceOrientation();
             }
