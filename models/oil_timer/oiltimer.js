@@ -337,7 +337,12 @@ export class OilTimer {
         physicsFolder.add(this.params, 'particleCount', 10, 150, 10).name('粒子数').onChange(() => {
             this.createOilParticles();
         });
-        physicsFolder.close();
+        // PC/タブレットはOpen、スマホはClose
+        if (this.isMobileDevice) {
+            physicsFolder.close();
+        } else {
+            physicsFolder.open();
+        }
         
         // Liquid effect controls
         const liquidFolder = gui.addFolder('流体表現');
@@ -353,12 +358,22 @@ export class OilTimer {
         liquidFolder.add(this.liquidParams, 'sharpness', 0, 5, 0.5).name('シャープネス').onChange(() => {
             this.updateLiquidFilter();
         });
-        liquidFolder.close();
+        
+        if (this.isMobileDevice) {
+            liquidFolder.close();
+        } else {
+            liquidFolder.open();
+        }
         
         // Visual controls
         const visualFolder = gui.addFolder('視覚効果');
         visualFolder.addColor(this.params, 'oilColor').name('オイル色');
-        visualFolder.close();
+        
+        if (this.isMobileDevice) {
+            visualFolder.close();
+        } else {
+            visualFolder.open();
+        }
         
         // Control buttons
         const controlFolder = gui.addFolder('制御');
@@ -372,9 +387,14 @@ export class OilTimer {
             controlFolder.add(this, 'toggleDeviceOrientation').name('加速度センサー');
         }
         
-        controlFolder.close();
+        controlFolder.open();
         
-        gui.close();
+        // PC/タブレットはGUI全体もOpen、スマホはClose
+        if (this.isMobileDevice) {
+            gui.close();
+        } else {
+            gui.open();
+        }
     }
     
     createWorld() {
