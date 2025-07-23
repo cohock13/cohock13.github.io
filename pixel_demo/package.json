@@ -1,0 +1,21 @@
+{
+  "name": "threejs-pixelated-demo",
+  "version": "1.0.0",
+  "description": "Three.js demo with pixelated postprocessing effects",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "serve . -p 8080",
+    "dev": "serve . -p 8080"
+  },
+  "dependencies": {
+    "three": "^0.168.0",
+    "lil-gui": "^0.19.2"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "keywords": ["three.js", "webgl", "postprocessing", "pixel", "demo"],
+  "author": "",
+  "license": "MIT"
+}

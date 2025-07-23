@@ -1,0 +1,21 @@
+{
+  "name": "threejs-aquarium-demo",
+  "version": "1.0.0",
+  "description": "Three.js 3D aquarium demo with custom shaders, fish flocking, and water effects",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "serve . -p 8080",
+    "dev": "serve . -p 8080"
+  },
+  "dependencies": {
+    "three": "^0.168.0",
+    "lil-gui": "^0.19.2"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "keywords": ["three.js", "webgl", "aquarium", "shaders", "animation", "fish", "water"],
+  "author": "",
+  "license": "MIT"
+}

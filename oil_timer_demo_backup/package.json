@@ -1,0 +1,26 @@
+{
+  "name": "oil-timer-demo",
+  "version": "2.0.0",
+  "description": "Advanced Oil Timer Simulator with Matter.js Physics and Liquid Effects",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve . -p 8080",
+    "dev": "serve . -p 8080"
+  },
+  "keywords": [
+    "oil-timer",
+    "physics-simulation",
+    "matter-js",
+    "liquid-effect",
+    "canvas",
+    "svg-filters"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

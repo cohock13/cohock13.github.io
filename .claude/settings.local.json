@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm start)",
+      "WebFetch(domain:tympanus.net)",
+      "WebFetch(domain:item.rakuten.co.jp)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:n3r4zzurr0.in)",
+      "Bash(npm install)",
+      "Bash(cp:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mv:*)"
+    ],
+    "deny": []
+  }
+}
