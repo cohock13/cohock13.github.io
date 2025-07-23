@@ -307,53 +307,60 @@ export class OilTimer {
     
     createMochiTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
         const plateCount = 3;
-        const stepsPerPlate = 4;
-        const stepHeight = 150; // 各ステップの縦の進み幅（≒最小マージン）
+        // Move stairs up by 10% of screen height
+        const verticalOffset = height * 0.1;
+        const middleStart = thickness * 2 - verticalOffset;
+        const middleEnd = height - thickness * 2 - verticalOffset;
+        const middleHeight = middleEnd - middleStart;
+         
+        // Calculate step dimensions for proper staircase
+        const stepHeight = 150;
         const stepWidth = containerWidth * 0.9;
-        const topY = 80; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
-        const margin = 50;
+        const stepsPerPlate = 4;
+
+        let baseY = 0;
         
+        // Create stepped stairs similar to original oil timer
         for (let i = 0; i < plateCount; i++) {
             let baseY;
-
-            if (i === 0) {
-                // 最上段は固定（オイル出現地点近く）
-                baseY = topY;
-            } else {
-                // 各プレートに 150px の余白 + 階段高さの合計分だけ下にずらす
-                const previousStepHeight = stepsPerPlate * (stepHeight / 2);
-                baseY = topY + i * (previousStepHeight + margin);
+            if(i == 0){
+                baseY = middleStart + (i + 0.5) * (middleHeight / plateCount);
             }
-
+            else{
+                baseY = middleStart + (i + 0.5) * (middleHeight / plateCount) + i*100;
+            }
+            
             const isLeftOriented = i % 2 === 0;
-
+            
+            // Create individual steps for each plate level
             for (let j = 0; j < stepsPerPlate; j++) {
-                const stepX = isLeftOriented
-                    ? containerX + (stepWidth / stepsPerPlate) * (j + 0.5)
-                    : containerX + containerWidth - (stepWidth / stepsPerPlate) * (j + 0.5);
-
-                const stepY = baseY + j * (stepHeight / 2);
-
-                const stepSurface = Matter.Bodies.rectangle(
-                    stepX,
-                    stepY,
-                    stepWidth / stepsPerPlate,
-                    thickness * 0.6,
-                    {
-                        isStatic: true,
-                        angle: isLeftOriented ? 0.05 : -0.05,
-                        friction: 0,
-                        frictionStatic: 0,
-                        restitution: 0,
-                        render: { visible: false }
-                    }
-                );
-
+                let stepX, stepY;
+                
+                // Calculate step position with height progression
+                if (isLeftOriented) {
+                    // Steps going down from left to right
+                    stepX = containerX + (stepWidth / stepsPerPlate) * (j + 0.5);
+                    stepY = baseY + (j * stepHeight / 2); // Progressive height increase
+                } else {
+                    // Steps going down from right to left
+                    stepX = containerX + containerWidth - (stepWidth / stepsPerPlate) * (j + 0.5);
+                    stepY = baseY + (j * stepHeight / 2); // Progressive height increase
+                }
+                
+                // Create horizontal step surface only (no vertical risers)
+                const stepSurface = Matter.Bodies.rectangle(stepX, stepY, stepWidth / stepsPerPlate, thickness * 0.6, {
+                    isStatic: true,
+                    angle: isLeftOriented ? 0.05 : -0.05, // 3 degree incline
+                    friction: 0,
+                    frictionStatic: 0,
+                    restitution: 0,
+                    render: { visible: false }
+                });
                 glassWalls.push(stepSurface);
             }
         }
     }
-
+    
     createMochiParticles() {
         // Remove existing mochi particle systems
         this.mochiParticles.forEach(mochiParticle => {
