@@ -81,18 +81,18 @@ export class OilTimer {
         this.liquidSystemParams = {
             spheresPerParticle: 7,      // Number of spheres per liquid particle (1 center + 6 outer)
             sphereRadius: 3,           // Radius of each sphere
-            stiffness: 0.15,            // Spring stiffness (低いほど柔らかい)
+            stiffness: 0.13,            // Spring stiffness (低いほど柔らかい)
             damping: 0.000,             // Spring damping (高いと動きがぬるっと止まる)
-            restitution: 0,            // Bounce factor for individual spheres
+            restitution: 0.0,            // Bounce factor for individual spheres
             length: 15,                // Spring natural length (少し短めにすると収縮力が働く)
-            friction: 0.00,
-            frictionAir: 0.02,
+            friction: 0.02,
+            frictionAir: 0.01,
             density: 0.01,
             centerMass: 0.20,           // Center sphere mass multiplier
             outerMass: 0.05,            // Outer spheres mass multiplier
             constraintVisible: true,  // Show spring constraints
             // Advanced liquid parameters
-            outerSpringStiffness: 0.20, // Stiffness between outer spheres
+            outerSpringStiffness: 0.2, // Stiffness between outer spheres
             compressionForce: 0.0,     // Force that keeps spheres together
             surfaceTension: 0.2        // Surface tension effect
         };
@@ -177,7 +177,7 @@ export class OilTimer {
     
     init() {
         // Setup Matter.js engine options
-        this.engine.world.gravity.scale = 0.0018;
+        this.engine.world.gravity.scale = 0.0015;
         this.engine.enableSleeping = false;
         
         // Add mouse control
@@ -336,7 +336,7 @@ export class OilTimer {
         const availableWidth = containerWidth * 0.9; // 利用可能幅
         const stepsPerPlate = Math.floor(availableWidth / fixedStepWidth); // 固定幅で埋められるstep数
         const topY = 30; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
-        const margin = 15;
+        const margin = 0;
         
         for (let i = 0; i < plateCount; i++) {
             let baseY;
@@ -355,7 +355,7 @@ export class OilTimer {
             for (let j = 0; j < stepsPerPlate; j++) {
                 // First step (j=0) has 5x steeper angle to prevent oil from getting stuck
                 const baseAngle = 0.05;
-                const angleMultiplier = j === 0 ? 7.5 : 1.5;  // steeper for first step
+                const angleMultiplier = j === 0 ? 7.5 : 2;  // steeper for first step
                 const stepAngle = (isLeftOriented ? baseAngle : -baseAngle) * angleMultiplier;
                 
                 // Calculate step position with fixed width (packed from container edge)
