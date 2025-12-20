@@ -56,15 +56,30 @@ export class OilTimer {
             frictionAir: 0.02,
             fallFrictionAir: 0.15,
             particleSize: 10,
-            particleCount: 30,
-            oilColor: '#ff6b35'
+            particleCount: 1,
+            oilColor: '#7181fe'
+        };
+        
+        // Mochi parameters
+        this.mochiParams = {
+            stiffness: 0.03,
+            damping: 0.43,
+            restitution: 0.3,
+            length: 30,
+            spheresPerParticle: 7,
+            sphereRadius: 10,
+            centerMass: 1,
+            outerMass: 1,
+            outerSpringStiffness: 0.25,
+            frictionAir: 0.01,
+            constraintVisible: true
         };
         
         // Liquid effect parameters
         this.liquidParams = {
-            blurRadius: 7.5,
-            threshold: 20,
-            sharpness: 3
+            blurRadius: 11,
+            threshold: 30,
+            sharpness: 5
         };
         
         
@@ -743,6 +758,12 @@ export class OilTimer {
                 particle.circleRadius = this.params.particleSize;
             }
         });
+        
+        // 絡まり防止処理を実行（フレームごとに実行するとパフォーマンスに影響するため、間隔を調整）
+        if (!this.lastTanglingPreventionTime || Date.now() - this.lastTanglingPreventionTime > 16) { // 約60FPSで実行
+            this.preventParticleTangling();
+            this.lastTanglingPreventionTime = Date.now();
+        }
     }
     
     isParticleGrounded(particle) {
@@ -782,6 +803,66 @@ export class OilTimer {
         }
         
         return false;
+    }
+    
+    preventParticleTangling() {
+        // 粒子間の絡まりを防ぐ処理
+        const minSeparationDistance = this.params.particleSize * 2.1; // 適切な分離距離
+        const separationForce = 0.005; // 分離力の強さ（より控えめに設定）
+        const maxSeparationForce = 0.03; // 最大分離力（シミュレーションが吹っ飛ばないように制限）
+        const velocityDamping = 0.98; // 速度減衰係数（絡まり時の過度な動きを抑制）
+        
+        for (let i = 0; i < this.particles.length; i++) {
+            for (let j = i + 1; j < this.particles.length; j++) {
+                const particleA = this.particles[i];
+                const particleB = this.particles[j];
+                
+                const dx = particleB.position.x - particleA.position.x;
+                const dy = particleB.position.y - particleA.position.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // 粒子が近すぎる場合に分離処理を行う
+                if (distance < minSeparationDistance && distance > 0.1) {
+                    const overlap = minSeparationDistance - distance;
+                    const separationIntensity = Math.min(overlap * separationForce, maxSeparationForce);
+                    
+                    // 正規化された分離ベクトル
+                    const separationX = (dx / distance) * separationIntensity;
+                    const separationY = (dy / distance) * separationIntensity;
+                    
+                    // 両方の粒子に反対方向の力を適用（質量を考慮）
+                    const massA = particleA.mass || 1;
+                    const massB = particleB.mass || 1;
+                    const totalMass = massA + massB;
+                    
+                    // 質量比に基づいて力を配分
+                    const forceRatioA = massB / totalMass;
+                    const forceRatioB = massA / totalMass;
+                    
+                    Matter.Body.applyForce(particleA, particleA.position, {
+                        x: -separationX * forceRatioA,
+                        y: -separationY * forceRatioA
+                    });
+                    
+                    Matter.Body.applyForce(particleB, particleB.position, {
+                        x: separationX * forceRatioB,
+                        y: separationY * forceRatioB
+                    });
+                    
+                    // 絡まり状態の粒子の速度を減衰させて安定性を向上
+                    if (overlap > this.params.particleSize * 0.5) {
+                        Matter.Body.setVelocity(particleA, {
+                            x: particleA.velocity.x * velocityDamping,
+                            y: particleA.velocity.y * velocityDamping
+                        });
+                        Matter.Body.setVelocity(particleB, {
+                            x: particleB.velocity.x * velocityDamping,
+                            y: particleB.velocity.y * velocityDamping
+                        });
+                    }
+                }
+            }
+        }
     }
     
     toggleDeviceOrientation() {

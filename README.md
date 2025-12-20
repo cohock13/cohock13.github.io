@@ -28,16 +28,6 @@
  cで視点切り替えが可能．WAS/矢印キーで操作．<br>
  右上のGUIから，加速度などの物理情報やキーボードの時系列データを出力が可能．<br>
  
- ## 質点の移動度評価テスト
- 
- https://cohock13.github.io/models/cell-eval-3d/
- 
- <img src="https://user-images.githubusercontent.com/55901554/163255315-fb34cc9a-f9a5-41e1-be1f-40f9e84759bb.PNG" width="500">
-
- たたき台として作成したシミュレータ．<br>
- 左側はランダムな，右側は赤と緑が沿った動きをする．<br>
- GUIは未整備．
- 
  ## 1次元ミミズモデル
  
  https://cohock13.github.io/models/earthworm/
