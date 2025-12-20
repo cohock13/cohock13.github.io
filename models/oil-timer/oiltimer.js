@@ -1,8 +1,20 @@
 export class OilTimer {
     constructor() {
         this.canvas = document.getElementById('canvas');
-        this.glassCanvas = document.createElement('canvas');
-        this.glassCtx = this.glassCanvas.getContext('2d');
+        
+        // Create separate canvases for different layers
+        this.backgroundCanvas = document.createElement('canvas');
+        this.backgroundCtx = this.backgroundCanvas.getContext('2d');
+        
+        this.oilCanvas = document.createElement('canvas');
+        this.oilCtx = this.oilCanvas.getContext('2d');
+        
+        this.stairsCanvas = document.createElement('canvas');
+        this.stairsCtx = this.stairsCanvas.getContext('2d');
+        
+        this.wallsCanvas = document.createElement('canvas');
+        this.wallsCtx = this.wallsCanvas.getContext('2d');
+        
         this.resizeCanvas();
         
         // Setup canvas layering
@@ -12,19 +24,19 @@ export class OilTimer {
         this.engine = Matter.Engine.create();
         this.world = this.engine.world;
         
-        // Use Matter.js built-in renderer for particles only
+        // Use Matter.js built-in renderer for particles only on oil canvas
         this.render = Matter.Render.create({
-            canvas: this.canvas,
+            canvas: this.oilCanvas,
             engine: this.engine,
             options: {
-                width: this.canvas.width,
-                height: this.canvas.height,
+                width: this.oilCanvas.width,
+                height: this.oilCanvas.height,
                 wireframes: false,
                 background: 'transparent',
                 showAngleIndicator: false,
                 showVelocity: false,
                 showDebug: false,
-                showStaticBodies: false // Hide physics bodies, show glass separately
+                showStaticBodies: false
             }
         });
         
@@ -35,14 +47,12 @@ export class OilTimer {
         // Simulation state
         this.isFlipped = false;
         this.liquidFilterEnabled = true;
-        this.particles = [];
+        this.mochiParticles = [];    // Array of mochi particle systems
         this.staticBodies = [];
         
-        // Device orientation and acceleration
-        this.deviceGravity = { x: 0, y: 0.7 };
-        this.isDeviceOrientationEnabled = false;
-        this.isMobileDevice = this.checkIfMobile();
-        this.deviceFlipState = false; // スマホの向きに基づく反転状態
+        // Oil spawning state
+        this.lastSpawnTime = 0;
+        this.nextParticleIndex = 0;
         
         // Performance tracking
         this.frameCount = 0;
@@ -51,74 +61,107 @@ export class OilTimer {
         
         // Physics parameters
         this.params = {
-            gravity: 0.7,
-            restitution: 0.1,
-            frictionAir: 0.02,
-            fallFrictionAir: 0.15,
-            particleSize: 10,
-            particleCount: 1,
-            oilColor: '#7181fe'
+            gravity: 2.0,
+            particleCount: 6,        // Number of mochi particle systems (not used for spawning)
+            oilColor: '#ff6b35',
+            spawnInterval: 2000      // Oil spawn interval in milliseconds
         };
         
-        // Mochi parameters
+        // Mochi particle system parameters (based on p5js soft body physics)
         this.mochiParams = {
-            stiffness: 0.03,
-            damping: 0.43,
-            restitution: 0.3,
-            length: 30,
-            spheresPerParticle: 7,
-            sphereRadius: 10,
-            centerMass: 1,
-            outerMass: 1,
-            outerSpringStiffness: 0.25,
-            frictionAir: 0.01,
-            constraintVisible: true
+            spheresPerParticle: 7,      // Number of spheres per mochi particle (1 center + 6 outer)
+            sphereRadius: 10,           // Radius of each sphere
+            stiffness: 0.08,            // Spring stiffness (低いほど柔らかい)
+            damping: 0.2,             // Spring damping (高いと動きがぬるっと止まる)
+            restitution: 0,            // Bounce factor for individual spheres
+            length: 30,                // Spring natural length (少し短めにすると収縮力が働く)
+            friction: 0,
+            frictionAir: 0,
+            density: 0.003,
+            centerMass: 0.65,           // Center sphere mass multiplier
+            outerMass: 0.2,            // Outer spheres mass multiplier
+            constraintVisible: false,  // Show spring constraints
+            // Advanced mochi parameters
+            outerSpringStiffness: 0.15, // Stiffness between outer spheres
+            compressionForce: 0.8,     // Force that keeps spheres together
+            surfaceTension: 0.2        // Surface tension effect
         };
         
         // Liquid effect parameters
         this.liquidParams = {
-            blurRadius: 11,
-            threshold: 30,
+            blurRadius: 20,
+            threshold: 50,
             sharpness: 5
         };
-        
         
         this.init();
         this.createWorld();
         this.setupGUI();
         this.animate();
         
-        // Expose to global scope
-        window.oilTimer = this;
+        // Expose to global scope for debugging
+        window.mochiOilTimer = this;
     }
     
     setupCanvasLayers() {
-        // Position glass canvas behind main canvas
-        this.glassCanvas.style.position = 'absolute';
-        this.glassCanvas.style.top = '0';
-        this.glassCanvas.style.left = '0';
-        this.glassCanvas.style.zIndex = '1';
-        this.canvas.style.position = 'absolute';
-        this.canvas.style.top = '0';
-        this.canvas.style.left = '0';
-        this.canvas.style.zIndex = '2';
+        const parentElement = this.canvas.parentNode;
         
-        // Insert glass canvas before main canvas
-        this.canvas.parentNode.insertBefore(this.glassCanvas, this.canvas);
+        // Setup background canvas (z-index: 1)
+        this.backgroundCanvas.style.position = 'absolute';
+        this.backgroundCanvas.style.top = '0';
+        this.backgroundCanvas.style.left = '0';
+        this.backgroundCanvas.style.zIndex = '1';
+        
+        // Setup oil canvas (z-index: 2)
+        this.oilCanvas.style.position = 'absolute';
+        this.oilCanvas.style.top = '0';
+        this.oilCanvas.style.left = '0';
+        this.oilCanvas.style.zIndex = '2';
+        
+        // Setup stairs canvas (z-index: 3)
+        this.stairsCanvas.style.position = 'absolute';
+        this.stairsCanvas.style.top = '0';
+        this.stairsCanvas.style.left = '0';
+        this.stairsCanvas.style.zIndex = '3';
+        
+        // Setup walls canvas (z-index: 4)
+        this.wallsCanvas.style.position = 'absolute';
+        this.wallsCanvas.style.top = '0';
+        this.wallsCanvas.style.left = '0';
+        this.wallsCanvas.style.zIndex = '4';
+        
+        // Hide the original canvas as we'll use our custom layers
+        this.canvas.style.display = 'none';
+        
+        // Insert all canvases in order
+        parentElement.insertBefore(this.backgroundCanvas, this.canvas);
+        parentElement.insertBefore(this.oilCanvas, this.canvas);
+        parentElement.insertBefore(this.stairsCanvas, this.canvas);
+        parentElement.insertBefore(this.wallsCanvas, this.canvas);
     }
     
     resizeCanvas() {
-        // Always use full screen regardless of device
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.glassCanvas.width = window.innerWidth;
-        this.glassCanvas.height = window.innerHeight;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        // Resize all canvases
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.backgroundCanvas.width = width;
+        this.backgroundCanvas.height = height;
+        this.oilCanvas.width = width;
+        this.oilCanvas.height = height;
+        this.stairsCanvas.width = width;
+        this.stairsCanvas.height = height;
+        this.wallsCanvas.width = width;
+        this.wallsCanvas.height = height;
         
         if (this.render) {
-            this.render.canvas.width = this.canvas.width;
-            this.render.canvas.height = this.canvas.height;
-            this.render.options.width = this.canvas.width;
-            this.render.options.height = this.canvas.height;
+            this.render.canvas = this.oilCanvas;
+            this.render.canvas.width = width;
+            this.render.canvas.height = height;
+            this.render.options.width = width;
+            this.render.options.height = height;
         }
     }
     
@@ -128,7 +171,7 @@ export class OilTimer {
         this.engine.enableSleeping = false;
         
         // Add mouse control
-        this.mouse = Matter.Mouse.create(this.canvas);
+        this.mouse = Matter.Mouse.create(this.oilCanvas);
         this.mouseConstraint = Matter.MouseConstraint.create(this.engine, {
             mouse: this.mouse,
             constraint: {
@@ -149,167 +192,6 @@ export class OilTimer {
         
         // Apply initial filters
         this.updateLiquidFilter();
-        
-        // Setup device orientation for mobile
-        if (this.isMobileDevice) {
-            this.setupDeviceOrientation();
-            // Set initial stairs state for mobile
-            this.switchStairsForOrientation();
-        }
-    }
-    
-    checkIfMobile() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-               ('ontouchstart' in window) || 
-               (navigator.maxTouchPoints > 0);
-    }
-    
-    setupDeviceOrientation() {
-        // Request permission for iOS 13+
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        this.enableDeviceOrientation();
-                    }
-                })
-                .catch(console.error);
-        } else {
-            // For other devices, try to enable directly
-            this.enableDeviceOrientation();
-        }
-    }
-    
-    enableDeviceOrientation() {
-        window.addEventListener('deviceorientation', (event) => {
-            this.handleDeviceOrientation(event);
-        });
-        
-        // Fallback to devicemotion if deviceorientation doesn't work
-        window.addEventListener('devicemotion', (event) => {
-            this.handleDeviceMotion(event);
-        });
-        
-        this.isDeviceOrientationEnabled = true;
-    }
-    
-    handleDeviceOrientation(event) {
-        if (!this.isDeviceOrientationEnabled) return;
-        
-        // Get device orientation (beta = front-to-back tilt, gamma = left-to-right tilt)
-        const beta = event.beta || 0;   // -180 to 180 degrees
-        const gamma = event.gamma || 0; // -90 to 90 degrees
-        
-        // Determine device flip state based on orientation
-        // デバイスの向きから反転状態を判断（上向き/下向き）
-        const wasFlipped = this.deviceFlipState;
-        this.deviceFlipState = Math.abs(beta) > 90; // 90度以上で反転状態
-        
-        // If flip state changed, switch stairs like PC version
-        if (wasFlipped !== this.deviceFlipState) {
-            this.switchStairsForOrientation();
-            console.log('📱 Device flipped:', this.deviceFlipState ? 'Upside down (inverted stairs active)' : 'Right side up (normal stairs active)');
-        }
-        
-        // Convert orientation to gravity vector
-        // Normalize beta and gamma to reasonable ranges for gravity
-        const maxTilt = 45; // degrees
-        const gravityStrength = this.params.gravity;
-        
-        // Calculate gravity based on device tilt
-        const normalizedBeta = Math.max(-1, Math.min(1, beta / maxTilt));
-        const normalizedGamma = Math.max(-1, Math.min(1, gamma / maxTilt));
-        
-        this.deviceGravity.x = normalizedGamma * gravityStrength;
-        this.deviceGravity.y = normalizedBeta * gravityStrength;
-        
-        // If device is roughly upside down (beta > 90 or beta < -90), flip Y
-        if (Math.abs(beta) > 90) {
-            this.deviceGravity.y = -this.deviceGravity.y;
-        }
-        
-        // Debug: Console output every 500ms to avoid spam
-        if (!this.lastDebugTime || Date.now() - this.lastDebugTime > 500) {
-            console.log('🔄 Device Orientation:', {
-                beta: beta.toFixed(1),
-                gamma: gamma.toFixed(1),
-                gravityX: this.deviceGravity.x.toFixed(3),
-                gravityY: this.deviceGravity.y.toFixed(3),
-                isEnabled: this.isDeviceOrientationEnabled,
-                isFlipped: this.deviceFlipState
-            });
-            this.lastDebugTime = Date.now();
-        }
-    }
-    
-    handleDeviceMotion(event) {
-        if (!this.isDeviceOrientationEnabled || !event.accelerationIncludingGravity) return;
-        
-        // Use accelerometer data as fallback
-        const accel = event.accelerationIncludingGravity;
-        const gravityStrength = this.params.gravity;
-        
-        // Smooth the values and apply to gravity
-        const smoothing = 0.8;
-        this.deviceGravity.x = this.deviceGravity.x * smoothing + (accel.x || 0) * (1 - smoothing) * gravityStrength * 0.1;
-        this.deviceGravity.y = this.deviceGravity.y * smoothing + (accel.y || 0) * (1 - smoothing) * gravityStrength * 0.1;
-        
-        // Debug: Console output for device motion every 500ms
-        if (!this.lastMotionDebugTime || Date.now() - this.lastMotionDebugTime > 500) {
-            console.log('📱 Device Motion:', {
-                accelX: (accel.x || 0).toFixed(3),
-                accelY: (accel.y || 0).toFixed(3),
-                accelZ: (accel.z || 0).toFixed(3),
-                gravityX: this.deviceGravity.x.toFixed(3),
-                gravityY: this.deviceGravity.y.toFixed(3),
-                isEnabled: this.isDeviceOrientationEnabled
-            });
-            this.lastMotionDebugTime = Date.now();
-        }
-    }
-    
-    switchStairsForOrientation() {
-        // モバイルでの階段切り替え処理
-        // deviceFlipState: false = 正位置 (通常の階段), true = 逆位置 (反転階段)
-        this.staticBodies.forEach(body => {
-            if (body.isInverted !== undefined) {
-                if (this.deviceFlipState) {
-                    // Device upside down (逆位置): use inverted plates for physics
-                    if (body.isInverted) {
-                        // Inverted plates: enable physics, show as white
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0001; // Enable physics collision
-                    } else {
-                        // Normal plates: disable physics, show as gray
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0000; // Disable physics collision
-                    }
-                } else {
-                    // Device right side up (正位置): use normal plates for physics
-                    if (body.isInverted) {
-                        // Inverted plates: disable physics, show as gray
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0000; // Disable physics collision
-                    } else {
-                        // Normal plates: enable physics, show as white
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0001; // Enable physics collision
-                    }
-                }
-            }
-        });
-        
-        // Add some impulse to particles when switching
-        this.particles.forEach(particle => {
-            const impulse = {
-                x: (Math.random() - 0.5) * 0.02,
-                y: this.deviceFlipState ? -0.02 : 0.02
-            };
-            Matter.Body.applyForce(particle, particle.position, impulse);
-        });
-        
-        // Update glass display
-        this.renderGlassStructure();
     }
     
     updateLiquidFilter() {
@@ -326,11 +208,11 @@ export class OilTimer {
             colorMatrix.setAttribute('values', matrixValues);
         }
         
-        // Apply filter to main canvas only
+        // Apply filter to oil canvas only
         if (this.liquidFilterEnabled) {
-            this.canvas.style.filter = 'url(#liquid-filter)';
+            this.oilCanvas.style.filter = 'url(#liquid-filter)';
         } else {
-            this.canvas.style.filter = 'none';
+            this.oilCanvas.style.filter = 'none';
         }
     }
     
@@ -340,76 +222,20 @@ export class OilTimer {
             return;
         }
         
-        const gui = new window.lil.GUI({ title: 'パラメータ' });
+        const gui = new window.lil.GUI({ title: 'オイルタイマー 設定' });
         
-        // Physics controls
-        const physicsFolder = gui.addFolder('物理パラメータ');
-        physicsFolder.add(this.params, 'gravity', 0.1, 2.0, 0.1).name('重力強度');
-        physicsFolder.add(this.params, 'restitution', 0.0, 0.8, 0.05).name('弾性');
-        physicsFolder.add(this.params, 'frictionAir', 0.0, 0.1, 0.005).name('接地時空気抵抗');
-        physicsFolder.add(this.params, 'fallFrictionAir', 0.0, 0.3, 0.01).name('落下時空気抵抗');
-        physicsFolder.add(this.params, 'particleSize', 3, 12, 1).name('粒子サイズ');
-        physicsFolder.add(this.params, 'particleCount', 10, 150, 10).name('粒子数').onChange(() => {
-            this.createOilParticles();
+        // Only the 5 requested controls
+        gui.add(this.params, 'spawnInterval', 500, 3000, 100).name('オイル出現間隔 (ms)');
+        gui.addColor(this.params, 'oilColor').name('色').onChange(() => {
+            this.updateMochiProperties();
         });
-        // PC/タブレットはOpen、スマホはClose
-        if (this.isMobileDevice) {
-            physicsFolder.close();
-        } else {
-            physicsFolder.open();
-        }
-        
-        // Liquid effect controls
-        const liquidFolder = gui.addFolder('流体表現');
-        liquidFolder.add(this, 'liquidFilterEnabled').name('流体効果 ON/OFF').onChange(() => {
+        gui.add(this.mochiParams, 'constraintVisible').name('ばね表示').onChange(() => {
+            this.updateConstraintVisibility();
+        });
+        gui.add(this, 'liquidFilterEnabled').name('流体効果 ON/OFF').onChange(() => {
             this.updateLiquidFilter();
         });
-        liquidFolder.add(this.liquidParams, 'blurRadius', 0, 10, 0.5).name('ブラー半径').onChange(() => {
-            this.updateLiquidFilter();
-        });
-        liquidFolder.add(this.liquidParams, 'threshold', 0, 30, 1).name('結合閾値').onChange(() => {
-            this.updateLiquidFilter();
-        });
-        liquidFolder.add(this.liquidParams, 'sharpness', 0, 5, 0.5).name('シャープネス').onChange(() => {
-            this.updateLiquidFilter();
-        });
-        
-        if (this.isMobileDevice) {
-            liquidFolder.close();
-        } else {
-            liquidFolder.open();
-        }
-        
-        // Visual controls
-        const visualFolder = gui.addFolder('視覚効果');
-        visualFolder.addColor(this.params, 'oilColor').name('オイル色');
-        
-        if (this.isMobileDevice) {
-            visualFolder.close();
-        } else {
-            visualFolder.open();
-        }
-        
-        // Control buttons
-        const controlFolder = gui.addFolder('制御');
-        controlFolder.add(this, 'reset').name('リセット');
-        
-        // Show flip button only for non-mobile devices
-        if (!this.isMobileDevice) {
-            controlFolder.add(this, 'flip').name('反転');
-        } else {
-            // Add device orientation toggle for mobile
-            controlFolder.add(this, 'toggleDeviceOrientation').name('加速度センサー');
-        }
-        
-        controlFolder.open();
-        
-        // PC/タブレットはGUI全体もOpen、スマホはClose
-        if (this.isMobileDevice) {
-            gui.close();
-        } else {
-            gui.open();
-        }
+        gui.add(this, 'reset').name('リセット');
     }
     
     createWorld() {
@@ -420,19 +246,26 @@ export class OilTimer {
         // Re-add mouse constraint
         Matter.World.add(this.world, this.mouseConstraint);
         
-        this.particles = [];
+        this.mochiParticles = [];
         this.staticBodies = [];
         
         // Create glass container structure
         this.createGlassStructure();
         
-        // Create oil particles
-        this.createOilParticles();
+        // Create mochi oil particles
+        this.createMochiParticles();
         
-        // Render glass structure on separate canvas
-        this.renderGlassStructure();
+        // Render structures on separate canvases
+        this.renderBackground();
+        this.renderStairs();
+        this.renderWalls();
         
-        console.log(`Created ${this.particles.length} particles and ${this.staticBodies.length} static bodies`);
+        console.log(`Created ${this.mochiParticles.length} mochi particles and ${this.staticBodies.length} static bodies`);
+    }
+    
+    separateStructuresForRendering() {
+        this.wallBodies = this.staticBodies.slice(0, 2); // First 2 bodies are main walls
+        this.stairBodies = this.staticBodies.slice(2);   // Rest are stairs
     }
     
     createGlassStructure() {
@@ -442,442 +275,440 @@ export class OilTimer {
         
         // Container dimensions - responsive width
         const isMobile = width < 768;
-        const containerWidth = isMobile ? width * 0.9 : width * 0.35;
+        const containerWidth = isMobile ? width * 0.9 : width * 0.45;
         const containerX = (width - containerWidth) / 2;
         
-        // Container boundaries (invisible)
+        // Container boundaries (invisible) - only left and right walls
         const boundaries = [
-            Matter.Bodies.rectangle(-thickness, height/2, thickness, height, { isStatic: true, render: { visible: false } }),
-            Matter.Bodies.rectangle(width + thickness, height/2, thickness, height, { isStatic: true, render: { visible: false } }),
-            Matter.Bodies.rectangle(width/2, height + thickness, width, thickness, { isStatic: true, render: { visible: false } }),
-            Matter.Bodies.rectangle(width/2, -thickness, width, thickness, { isStatic: true, render: { visible: false } })
+            Matter.Bodies.rectangle(-thickness, height/2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } }),
+            Matter.Bodies.rectangle(width + thickness, height/2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } })
         ];
         Matter.World.add(this.world, boundaries);
         
         const glassWalls = [];
         
-        // Main container walls - left, right, top, bottom
+        // Main container walls - only left and right walls
         glassWalls.push(
             // Left wall
-            Matter.Bodies.rectangle(containerX - thickness/2, height/2, thickness, height, { isStatic: true, render: { visible: false } }),
+            Matter.Bodies.rectangle(containerX - thickness/2, height/2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } }),
             // Right wall
-            Matter.Bodies.rectangle(containerX + containerWidth + thickness/2, height/2, thickness, height, { isStatic: true, render: { visible: false } }),
-            // Top wall
-            Matter.Bodies.rectangle(containerX + containerWidth/2, thickness/2, containerWidth, thickness, { isStatic: true, render: { visible: false } }),
-            // Bottom wall
-            Matter.Bodies.rectangle(containerX + containerWidth/2, height - thickness/2, containerWidth, thickness, { isStatic: true, render: { visible: false } })
+            Matter.Bodies.rectangle(containerX + containerWidth + thickness/2, height/2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } })
         );
         
-        // Create plates based on stair type
-        this.createStairPlates(glassWalls, containerX, containerWidth, thickness, height);
-        
-        // Create inverted plates for display only when gravity is flipped
-        this.createInvertedStairPlates(glassWalls, containerX, containerWidth, thickness, height);
+        // Create stairs for testing mochi behavior - similar to original oil timer
+        this.createMochiTestStairs(glassWalls, containerX, containerWidth, thickness, height);
         
         this.staticBodies = glassWalls;
         Matter.World.add(this.world, glassWalls);
+        
+        // Separate stairs and walls for rendering
+        this.separateStructuresForRendering();
     }
     
-    createStairPlates(glassWalls, containerX, containerWidth, thickness, height) {
-        const plateCount = 4;
-        const middleStart = thickness * 2;
-        const middleEnd = height - thickness * 2;
-        const middleHeight = middleEnd - middleStart;
-        
-        // Add spacing between plates (about 1 oil particle size)
-        const plateSpacing = this.params.particleSize * 2;
-        const availableHeight = middleHeight - (plateSpacing * (plateCount - 1));
-        const plateVerticalSpacing = availableHeight / (plateCount + 1);
-        const particleGap = this.params.particleSize * 5;
-        const plateLength = containerWidth - particleGap;
-        const plateThickness = thickness * 0.6;
-        
-        // Stair type - step-like structure with 3 degree incline
-        const stepAngle = 0.052; // 3 degrees
-        const stepHeight = 20;
+    createMochiTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
+        const plateCount = 3;
+        const stepsPerPlate = 4;
+        const stepHeight = 150; // 各ステップの縦の進み幅（≒最小マージン）
+        const stepWidth = containerWidth * 0.9;
+        const topY = 80; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
+        const margin = 50;
         
         for (let i = 0; i < plateCount; i++) {
-            const baseY = middleStart + (i + 1) * plateVerticalSpacing + (i * plateSpacing);
-            const isLeftOriented = i % 2 === 0;
-            
-            // Create steps with clear height differences
-            const stepsPerPlate = 5;
-            const stepWidth = plateLength / stepsPerPlate;
-            
-            for (let j = 0; j < stepsPerPlate; j++) {
-                let stepX, stepY;
-                
-                // Calculate step position with proper height progression
-                if (isLeftOriented) {
-                    stepX = containerX + stepWidth * (j + 0.5);
-                    stepY = baseY - (stepHeight * (stepsPerPlate - 1) / 2) + (j * stepHeight);
-                } else {
-                    stepX = containerX + containerWidth - stepWidth * (j + 0.5);
-                    stepY = baseY - (stepHeight * (stepsPerPlate - 1) / 2) + (j * stepHeight);
-                }
-                
-                // Step surface with 3 degree incline
-                const stepSurface = Matter.Bodies.rectangle(stepX, stepY, stepWidth, plateThickness, {
-                    isStatic: true,
-                    angle: isLeftOriented ? stepAngle : -stepAngle,
-                    render: { visible: false },
-                    collisionFilter: { mask: 0x0001 },
-                    isInverted: false
-                });
-                glassWalls.push(stepSurface);
-                
-                // Vertical step riser between steps
-                if (j < stepsPerPlate - 1) {
-                    const currentStepY = baseY - (stepHeight * (stepsPerPlate - 1) / 2) + (j * stepHeight);
-                    const riserHeight = stepHeight;
-                    const riserX = isLeftOriented ? stepX + stepWidth/2 : stepX - stepWidth/2;
-                    const riserY = currentStepY + stepHeight/2;
-                    
-                    const stepRiser = Matter.Bodies.rectangle(riserX, riserY, plateThickness, riserHeight, {
-                        isStatic: true,
-                        angle: 0,
-                        render: { visible: false },
-                        collisionFilter: { mask: 0x0001 },
-                        isInverted: false
-                    });
-                    glassWalls.push(stepRiser);
-                }
+            let baseY;
+
+            if (i === 0) {
+                // 最上段は固定（オイル出現地点近く）
+                baseY = topY;
+            } else {
+                // 各プレートに 150px の余白 + 階段高さの合計分だけ下にずらす
+                const previousStepHeight = stepsPerPlate * (stepHeight / 2);
+                baseY = topY + i * (previousStepHeight + margin);
             }
-        }
-    }
-    
-    createInvertedStairPlates(glassWalls, containerX, containerWidth, thickness, height) {
-        const plateCount = 4;
-        const middleStart = thickness * 2;
-        const middleEnd = height - thickness * 2;
-        const middleHeight = middleEnd - middleStart;
-        
-        // Add spacing between plates (about 1 oil particle size) - same as normal stairs
-        const plateSpacing = this.params.particleSize * 2;
-        const availableHeight = middleHeight - (plateSpacing * (plateCount - 1));
-        const plateVerticalSpacing = availableHeight / (plateCount + 1);
-        const particleGap = this.params.particleSize * 5;
-        const plateLength = containerWidth - particleGap;
-        const plateThickness = thickness * 0.6;
-        
-        // Inverted stair type - opposite wall connection and reversed slope for upward flow
-        const stepAngle = 0.052; // 3 degrees
-        const stepHeight = 20;
-        
-        for (let i = 0; i < plateCount; i++) {
-            const baseY = middleStart + (i + 1) * plateVerticalSpacing + (i * plateSpacing);
+
             const isLeftOriented = i % 2 === 0;
-            
-            const stepsPerPlate = 5;
-            const stepWidth = plateLength / stepsPerPlate;
-            
+
             for (let j = 0; j < stepsPerPlate; j++) {
-                let stepX, stepY;
-                
-                // Switch wall connection and reverse the step direction
-                if (isLeftOriented) {
-                    // Original left -> move to right wall, but reverse step order
-                    stepX = containerX + containerWidth - stepWidth * (stepsPerPlate - j - 0.5);
-                    stepY = baseY - (stepHeight * (stepsPerPlate - 1) / 2) + (j * stepHeight);
-                } else {
-                    // Original right -> move to left wall, but reverse step order
-                    stepX = containerX + stepWidth * (stepsPerPlate - j - 0.5);
-                    stepY = baseY - (stepHeight * (stepsPerPlate - 1) / 2) + (j * stepHeight);
-                }
-                
-                const stepSurface = Matter.Bodies.rectangle(stepX, stepY, stepWidth, plateThickness, {
-                    isStatic: true,
-                    angle: isLeftOriented ? stepAngle : -stepAngle, // Back to original slope direction (left to right down)
-                    render: { visible: false },
-                    collisionFilter: { mask: 0x0000 },
-                    isInverted: true
-                });
-                glassWalls.push(stepSurface);
-                
-                // Step riser positioned between current and next step (for reversed step order)
-                if (j < stepsPerPlate - 1) {
-                    const currentStepY = baseY - (stepHeight * (stepsPerPlate - 1) / 2) + (j * stepHeight);
-                    const nextStepY = baseY - (stepHeight * (stepsPerPlate - 1) / 2) + ((j + 1) * stepHeight);
-                    const riserHeight = stepHeight;
-                    
-                    // Calculate next step position for proper riser placement
-                    let nextStepX;
-                    if (isLeftOriented) {
-                        nextStepX = containerX + containerWidth - stepWidth * (stepsPerPlate - (j + 1) - 0.5);
-                    } else {
-                        nextStepX = containerX + stepWidth * (stepsPerPlate - (j + 1) - 0.5);
+                const stepX = isLeftOriented
+                    ? containerX + (stepWidth / stepsPerPlate) * (j + 0.5)
+                    : containerX + containerWidth - (stepWidth / stepsPerPlate) * (j + 0.5);
+
+                const stepY = baseY + j * (stepHeight / 2);
+
+                const stepSurface = Matter.Bodies.rectangle(
+                    stepX,
+                    stepY,
+                    stepWidth / stepsPerPlate,
+                    thickness * 0.6,
+                    {
+                        isStatic: true,
+                        angle: isLeftOriented ? 0.05 : -0.05,
+                        friction: 0,
+                        frictionStatic: 0,
+                        restitution: 0,
+                        render: { visible: false }
                     }
-                    
-                    // Position riser between current and next step
-                    const riserX = (stepX + nextStepX) / 2;
-                    const riserY = (currentStepY + nextStepY) / 2;
-                    
-                    const stepRiser = Matter.Bodies.rectangle(riserX, riserY, plateThickness, riserHeight, {
-                        isStatic: true,
-                        angle: 0, // Keep risers vertical
-                        render: { visible: false },
-                        collisionFilter: { mask: 0x0000 },
-                        isInverted: true
-                    });
-                    glassWalls.push(stepRiser);
-                }
+                );
+
+                glassWalls.push(stepSurface);
             }
         }
     }
-    
-    renderGlassStructure() {
-        // Clear glass canvas
-        this.glassCtx.fillStyle = '#000000';
-        this.glassCtx.fillRect(0, 0, this.glassCanvas.width, this.glassCanvas.height);
-        
-        // Render glass bodies
-        this.staticBodies.forEach(body => {
-            this.renderGlassBody(body);
+
+    createMochiParticles() {
+        // Remove existing mochi particle systems
+        this.mochiParticles.forEach(mochiParticle => {
+            this.removeMochiParticle(mochiParticle);
         });
+        
+        this.mochiParticles = [];
+        this.nextParticleIndex = 0;
+        
+        // No initial particles - they will be spawned automatically
     }
     
-    renderGlassBody(body) {
-        // Check if this body should be rendered as gray (inactive)
-        // モバイルではdeviceFlipState、PC/タブレットではisFlippedを使用
-        const currentFlipState = this.isMobileDevice && this.isDeviceOrientationEnabled ? 
-            this.deviceFlipState : this.isFlipped;
-        const isInactive = (currentFlipState && !body.isInverted) || (!currentFlipState && body.isInverted);
+    createMochiParticle(centerX, centerY, index) {
+        const spheres = [];
+        const constraints = [];
+        const numSpheres = this.mochiParams.spheresPerParticle;
+        const radius = this.mochiParams.sphereRadius;
         
-        // Glass appearance - white for active, dark gray for inactive
-        if (isInactive && body.isInverted !== undefined) {
-            this.glassCtx.fillStyle = 'rgba(64, 64, 64, 0.15)';
-            this.glassCtx.strokeStyle = 'rgba(64, 64, 64, 0.6)';
-            this.glassCtx.lineWidth = 1;
-        } else {
-            this.glassCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-            this.glassCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-            this.glassCtx.lineWidth = 2;
-        }
+        // Create center sphere (acts as the core of the mochi particle)
+        const centerSphere = Matter.Bodies.circle(centerX, centerY, radius, {
+            restitution: this.mochiParams.restitution,
+            friction: this.mochiParams.friction,
+            frictionAir: this.mochiParams.frictionAir,
+            density: this.mochiParams.density * this.mochiParams.centerMass,
+            render: {
+                fillStyle: this.params.oilColor,
+                strokeStyle: 'transparent',
+                lineWidth: 0
+            },
+            mochiIndex: index,
+            sphereType: 'center'
+        });
+        spheres.push(centerSphere);
         
-        // Use the actual vertices coordinates directly (already in world space)
-        const vertices = body.vertices;
-        if (vertices.length > 0) {
-            this.glassCtx.beginPath();
-            this.glassCtx.moveTo(vertices[0].x, vertices[0].y);
-            for (let i = 1; i < vertices.length; i++) {
-                this.glassCtx.lineTo(vertices[i].x, vertices[i].y);
-            }
-            this.glassCtx.closePath();
-            this.glassCtx.fill();
-            this.glassCtx.stroke();
+        // Create outer spheres arranged in a circle around center
+        const outerCount = numSpheres - 1;
+        const angleStep = (2 * Math.PI) / outerCount;
+        const arrangementRadius = this.mochiParams.length * 0.7;
+        
+        for (let i = 0; i < outerCount; i++) {
+            const angle = i * angleStep;
+            const x = centerX + Math.cos(angle) * arrangementRadius;
+            const y = centerY + Math.sin(angle) * arrangementRadius;
             
-            // Add glass highlight
-            this.glassCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            this.glassCtx.lineWidth = 1;
-            this.glassCtx.stroke();
-        }
-    }
-    
-    createOilParticles() {
-        // Remove existing particles
-        if (this.particles.length > 0) {
-            Matter.World.remove(this.world, this.particles);
-        }
-        
-        this.particles = [];
-        const isMobile = this.canvas.width < 768;
-        const containerWidth = isMobile ? this.canvas.width * 0.9 : this.canvas.width * 0.35;
-        const containerX = (this.canvas.width - containerWidth) / 2;
-        
-        // Create initial particles in top 10% of container
-        for (let i = 0; i < this.params.particleCount; i++) {
-            const x = containerX + 25 + Math.random() * (containerWidth - 50);
-            const y = 25 + Math.random() * (this.canvas.height * 0.1);
-            
-            const particle = Matter.Bodies.circle(x, y, this.params.particleSize, {
-                restitution: this.params.restitution,
-                friction: 0, // 地面摩擦を明示的に0に設定
-                frictionAir: this.params.frictionAir,
-                density: 0.002,
+            const outerSphere = Matter.Bodies.circle(x, y, radius * 0.85, {
+                restitution: this.mochiParams.restitution,
+                friction: this.mochiParams.friction,
+                frictionAir: this.mochiParams.frictionAir,
+                density: this.mochiParams.density * this.mochiParams.outerMass,
                 render: {
                     fillStyle: this.params.oilColor,
                     strokeStyle: 'transparent',
                     lineWidth: 0
+                },
+                mochiIndex: index,
+                sphereType: 'outer',
+                outerIndex: i
+            });
+            
+            spheres.push(outerSphere);
+            
+            // Create spring constraint between center and outer sphere
+            const centerConstraint = Matter.Constraint.create({
+                bodyA: centerSphere,
+                bodyB: outerSphere,
+                length: this.mochiParams.length,
+                stiffness: this.mochiParams.stiffness,
+                damping: this.mochiParams.damping,
+                render: {
+                    visible: this.mochiParams.constraintVisible,
+                    strokeStyle: 'rgba(255, 255, 255, 0.3)',
+                    lineWidth: 1
                 }
             });
             
-            this.particles.push(particle);
+            constraints.push(centerConstraint);
         }
         
-        Matter.World.add(this.world, this.particles);
+        // Create constraints between adjacent outer spheres for surface tension
+        for (let i = 0; i < outerCount; i++) {
+            const nextIndex = (i + 1) % outerCount;
+            const outerConstraint = Matter.Constraint.create({
+                bodyA: spheres[1 + i], // outer spheres start at index 1
+                bodyB: spheres[1 + nextIndex],
+                length: this.mochiParams.length * 1.1, // Slightly longer for flexibility
+                stiffness: this.mochiParams.outerSpringStiffness, // Softer connection
+                damping: this.mochiParams.damping * 0.8,
+                render: {
+                    visible: this.mochiParams.constraintVisible,
+                    strokeStyle: 'rgba(255, 255, 255, 0.2)',
+                    lineWidth: 1
+                }
+            });
+            
+            constraints.push(outerConstraint);
+        }
+        
+        // Add cross-connections for extra stability (every other outer sphere)
+        for (let i = 0; i < outerCount; i += 2) {
+            const oppositeIndex = (i + Math.floor(outerCount / 2)) % outerCount;
+            if (oppositeIndex !== i) {
+                const crossConstraint = Matter.Constraint.create({
+                    bodyA: spheres[1 + i],
+                    bodyB: spheres[1 + oppositeIndex],
+                    length: this.mochiParams.length * 1.8,
+                    stiffness: this.mochiParams.stiffness * 0.3, // Much softer for internal structure
+                    damping: this.mochiParams.damping * 1.2,
+                    render: {
+                        visible: this.mochiParams.constraintVisible,
+                        strokeStyle: 'rgba(255, 255, 255, 0.1)',
+                        lineWidth: 1
+                    }
+                });
+                
+                constraints.push(crossConstraint);
+            }
+        }
+        
+        return {
+            index: index,
+            spheres: spheres,
+            constraints: constraints,
+            centerSphere: centerSphere
+        };
     }
     
+    removeMochiParticle(mochiParticle) {
+        if (mochiParticle.spheres.length > 0) {
+            Matter.World.remove(this.world, mochiParticle.spheres);
+        }
+        if (mochiParticle.constraints.length > 0) {
+            Matter.World.remove(this.world, mochiParticle.constraints);
+        }
+    }
+    
+    recreateMochiSystem() {
+        // Store current center positions and velocities
+        const positions = this.mochiParticles.map(mp => ({
+            x: mp.centerSphere.position.x,
+            y: mp.centerSphere.position.y,
+            vx: mp.centerSphere.velocity.x,
+            vy: mp.centerSphere.velocity.y
+        }));
+        
+        // Recreate all mochi particles
+        this.createMochiParticles();
+        
+        // Restore center positions and velocities if possible
+        for (let i = 0; i < Math.min(positions.length, this.mochiParticles.length); i++) {
+            const center = this.mochiParticles[i].centerSphere;
+            Matter.Body.setPosition(center, { x: positions[i].x, y: positions[i].y });
+            Matter.Body.setVelocity(center, { x: positions[i].vx, y: positions[i].vy });
+            
+            // Arrange outer spheres around new center position with slight random offset
+            const mochiParticle = this.mochiParticles[i];
+            const outerCount = mochiParticle.spheres.length - 1;
+            const angleStep = (2 * Math.PI) / outerCount;
+            const arrangementRadius = this.mochiParams.length * 0.7;
+            
+            for (let j = 0; j < outerCount; j++) {
+                const angle = j * angleStep + (Math.random() - 0.5) * 0.3; // Small random offset
+                const x = positions[i].x + Math.cos(angle) * arrangementRadius;
+                const y = positions[i].y + Math.sin(angle) * arrangementRadius;
+                Matter.Body.setPosition(mochiParticle.spheres[1 + j], { x, y });
+            }
+        }
+    }
+    
+    updateMochiConstraints() {
+        this.mochiParticles.forEach(mochiParticle => {
+            mochiParticle.constraints.forEach((constraint, index) => {
+                const outerCount = mochiParticle.spheres.length - 1;
+                
+                if (index < outerCount) {
+                    // Center-to-outer constraints
+                    constraint.length = this.mochiParams.length;
+                    constraint.stiffness = this.mochiParams.stiffness;
+                    constraint.damping = this.mochiParams.damping;
+                } else if (index < outerCount * 2) {
+                    // Outer-to-outer adjacent constraints
+                    constraint.length = this.mochiParams.length * 1.1;
+                    constraint.stiffness = this.mochiParams.outerSpringStiffness;
+                    constraint.damping = this.mochiParams.damping * 0.8;
+                } else {
+                    // Cross constraints
+                    constraint.length = this.mochiParams.length * 1.8;
+                    constraint.stiffness = this.mochiParams.stiffness * 0.3;
+                    constraint.damping = this.mochiParams.damping * 1.2;
+                }
+            });
+        });
+    }
+    
+    updateMochiSphereSize() {
+        this.mochiParticles.forEach(mochiParticle => {
+            mochiParticle.spheres.forEach((sphere, index) => {
+                const targetRadius = index === 0 ? 
+                    this.mochiParams.sphereRadius : 
+                    this.mochiParams.sphereRadius * 0.85;
+                const currentRadius = sphere.circleRadius || targetRadius;
+                
+                if (Math.abs(currentRadius - targetRadius) > 0.1) {
+                    const scale = targetRadius / currentRadius;
+                    Matter.Body.scale(sphere, scale, scale);
+                    sphere.circleRadius = targetRadius;
+                }
+            });
+        });
+    }
+    
+    updateMochiProperties() {
+        this.mochiParticles.forEach(mochiParticle => {
+            mochiParticle.spheres.forEach(sphere => {
+                sphere.restitution = this.mochiParams.restitution;
+                sphere.friction = this.mochiParams.friction;
+                sphere.frictionAir = this.mochiParams.frictionAir;
+                
+                // Update color
+                if (sphere.render) {
+                    sphere.render.fillStyle = this.params.oilColor;
+                }
+            });
+        });
+    }
+    
+    updateMochiMasses() {
+        this.mochiParticles.forEach(mochiParticle => {
+            mochiParticle.spheres.forEach((sphere, index) => {
+                const massMultiplier = index === 0 ? 
+                    this.mochiParams.centerMass : 
+                    this.mochiParams.outerMass;
+                Matter.Body.setDensity(sphere, this.mochiParams.density * massMultiplier);
+            });
+        });
+    }
+    
+    updateConstraintVisibility() {
+        this.mochiParticles.forEach(mochiParticle => {
+            mochiParticle.constraints.forEach(constraint => {
+                constraint.render.visible = this.mochiParams.constraintVisible;
+            });
+        });
+    }
+    
+    renderBackground() {
+        // Clear background canvas and add dark background
+        this.backgroundCtx.fillStyle = '#000000';
+        this.backgroundCtx.fillRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
+    }
+    
+    renderStairs() {
+        // Clear stairs canvas
+        this.stairsCtx.clearRect(0, 0, this.stairsCanvas.width, this.stairsCanvas.height);
+        
+        // Render stair bodies
+        if (this.stairBodies) {
+            this.stairBodies.forEach(body => {
+                this.renderGlassBody(this.stairsCtx, body, 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.4)');
+            });
+        }
+    }
+    
+    renderWalls() {
+        // Clear walls canvas
+        this.wallsCtx.clearRect(0, 0, this.wallsCanvas.width, this.wallsCanvas.height);
+        
+        // Render wall bodies
+        if (this.wallBodies) {
+            this.wallBodies.forEach(body => {
+                this.renderGlassBody(this.wallsCtx, body, 'rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.6)');
+            });
+        }
+    }
+    
+    renderGlassBody(ctx, body, fillStyle, strokeStyle) {
+        // Glass appearance
+        ctx.fillStyle = fillStyle;
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 2;
+        
+        // Render based on body type
+        if (body.circleRadius) {
+            // Circle body (bumps)
+            ctx.beginPath();
+            ctx.arc(body.position.x, body.position.y, body.circleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            // Rectangle body (walls and plates)
+            const vertices = body.vertices;
+            if (vertices.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(vertices[0].x, vertices[0].y);
+                for (let i = 1; i < vertices.length; i++) {
+                    ctx.lineTo(vertices[i].x, vertices[i].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Add glass highlight
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+    }
     
     updatePhysics() {
-        // Update gravity based on device orientation (mobile) or manual flip (desktop)
-        if (this.isMobileDevice && this.isDeviceOrientationEnabled) {
-            // Use device orientation for mobile
-            this.engine.world.gravity.x = this.deviceGravity.x;
-            this.engine.world.gravity.y = this.deviceGravity.y;
-            
-            // Debug: Show applied gravity values every 1000ms
-            if (!this.lastAppliedGravityDebugTime || Date.now() - this.lastAppliedGravityDebugTime > 1000) {
-                console.log('⚡ Applied Gravity:', {
-                    worldGravityX: this.engine.world.gravity.x.toFixed(3),
-                    worldGravityY: this.engine.world.gravity.y.toFixed(3),
-                    deviceGravityX: this.deviceGravity.x.toFixed(3),
-                    deviceGravityY: this.deviceGravity.y.toFixed(3),
-                    isMobile: this.isMobileDevice,
-                    isOrientationEnabled: this.isDeviceOrientationEnabled
-                });
-                this.lastAppliedGravityDebugTime = Date.now();
-            }
-        } else {
-            // Use manual flip for desktop
-            this.engine.world.gravity.x = 0;
-            this.engine.world.gravity.y = this.isFlipped ? -this.params.gravity : this.params.gravity;
-        }
+        // Update gravity
+        this.engine.world.gravity.x = 0;
+        this.engine.world.gravity.y = this.isFlipped ? -this.params.gravity : this.params.gravity;
         
-        // Update particle properties
-        this.particles.forEach(particle => {
-            // Update visual properties
-            if (particle.render) {
-                particle.render.fillStyle = this.params.oilColor;
-            }
-            
-            // Update physics properties
-            particle.restitution = this.params.restitution;
-            particle.friction = 0; // 地面摩擦を明示的に0に設定
-            
-            // Check if particle is in contact with any static body (grounded)
-            const isGrounded = this.isParticleGrounded(particle);
-            
-            // Apply different air friction based on grounded state
-            particle.frictionAir = isGrounded ? this.params.frictionAir : this.params.fallFrictionAir;
-            
-            // Scale particle if size changed
-            const currentRadius = particle.circleRadius || this.params.particleSize;
-            if (Math.abs(currentRadius - this.params.particleSize) > 0.1) {
-                const scale = this.params.particleSize / currentRadius;
-                Matter.Body.scale(particle, scale, scale);
-                particle.circleRadius = this.params.particleSize;
-            }
-        });
+        // Update all mochi particle properties
+        this.updateMochiProperties();
         
-        // 絡まり防止処理を実行（フレームごとに実行するとパフォーマンスに影響するため、間隔を調整）
-        if (!this.lastTanglingPreventionTime || Date.now() - this.lastTanglingPreventionTime > 16) { // 約60FPSで実行
-            this.preventParticleTangling();
-            this.lastTanglingPreventionTime = Date.now();
-        }
+        // Apply subtle forces for mochi behavior enhancement
+        this.applyMochiForces();
     }
     
-    isParticleGrounded(particle) {
-        // Check actual collision contacts using Matter.js pairs
-        const pairs = this.engine.pairs.list;
-        
-        for (let pair of pairs) {
-            if (!pair.isActive) continue;
+    applyMochiForces() {
+        // Apply additional forces to enhance mochi-like behavior
+        this.mochiParticles.forEach(mochiParticle => {
+            const centerSphere = mochiParticle.centerSphere;
+            const outerSpheres = mochiParticle.spheres.slice(1);
             
-            // Check if this particle is involved in a collision
-            if (pair.bodyA === particle || pair.bodyB === particle) {
-                const otherBody = pair.bodyA === particle ? pair.bodyB : pair.bodyA;
-                
-                // Check if the other body is a static body (wall or step)
-                if (otherBody.isStatic) {
-                    // Additional check: ensure the collision is actually happening (not just near)
-                    if (pair.contacts && pair.contacts.length > 0) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        // Fallback: also check with other particles for particle-to-particle contact
-        for (let otherParticle of this.particles) {
-            if (otherParticle === particle) continue;
+            // Calculate center of mass
+            let totalMass = centerSphere.mass;
+            let comX = centerSphere.position.x * centerSphere.mass;
+            let comY = centerSphere.position.y * centerSphere.mass;
             
-            const dx = particle.position.x - otherParticle.position.x;
-            const dy = particle.position.y - otherParticle.position.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const minDistance = particle.circleRadius + otherParticle.circleRadius;
+            outerSpheres.forEach(sphere => {
+                totalMass += sphere.mass;
+                comX += sphere.position.x * sphere.mass;
+                comY += sphere.position.y * sphere.mass;
+            });
             
-            // If touching another particle, consider it grounded
-            if (distance < minDistance + 2) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    preventParticleTangling() {
-        // 粒子間の絡まりを防ぐ処理
-        const minSeparationDistance = this.params.particleSize * 2.1; // 適切な分離距離
-        const separationForce = 0.005; // 分離力の強さ（より控えめに設定）
-        const maxSeparationForce = 0.03; // 最大分離力（シミュレーションが吹っ飛ばないように制限）
-        const velocityDamping = 0.98; // 速度減衰係数（絡まり時の過度な動きを抑制）
-        
-        for (let i = 0; i < this.particles.length; i++) {
-            for (let j = i + 1; j < this.particles.length; j++) {
-                const particleA = this.particles[i];
-                const particleB = this.particles[j];
-                
-                const dx = particleB.position.x - particleA.position.x;
-                const dy = particleB.position.y - particleA.position.y;
+            comX /= totalMass;
+            comY /= totalMass;
+            
+            // Apply gentle cohesion force to keep mochi together
+            const cohesionStrength = 0.0002 * this.mochiParams.compressionForce;
+            
+            outerSpheres.forEach(sphere => {
+                const dx = comX - sphere.position.x;
+                const dy = comY - sphere.position.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // 粒子が近すぎる場合に分離処理を行う
-                if (distance < minSeparationDistance && distance > 0.1) {
-                    const overlap = minSeparationDistance - distance;
-                    const separationIntensity = Math.min(overlap * separationForce, maxSeparationForce);
-                    
-                    // 正規化された分離ベクトル
-                    const separationX = (dx / distance) * separationIntensity;
-                    const separationY = (dy / distance) * separationIntensity;
-                    
-                    // 両方の粒子に反対方向の力を適用（質量を考慮）
-                    const massA = particleA.mass || 1;
-                    const massB = particleB.mass || 1;
-                    const totalMass = massA + massB;
-                    
-                    // 質量比に基づいて力を配分
-                    const forceRatioA = massB / totalMass;
-                    const forceRatioB = massA / totalMass;
-                    
-                    Matter.Body.applyForce(particleA, particleA.position, {
-                        x: -separationX * forceRatioA,
-                        y: -separationY * forceRatioA
-                    });
-                    
-                    Matter.Body.applyForce(particleB, particleB.position, {
-                        x: separationX * forceRatioB,
-                        y: separationY * forceRatioB
-                    });
-                    
-                    // 絡まり状態の粒子の速度を減衰させて安定性を向上
-                    if (overlap > this.params.particleSize * 0.5) {
-                        Matter.Body.setVelocity(particleA, {
-                            x: particleA.velocity.x * velocityDamping,
-                            y: particleA.velocity.y * velocityDamping
-                        });
-                        Matter.Body.setVelocity(particleB, {
-                            x: particleB.velocity.x * velocityDamping,
-                            y: particleB.velocity.y * velocityDamping
-                        });
-                    }
+                if (distance > this.mochiParams.length * 1.5) {
+                    const forceX = dx * cohesionStrength;
+                    const forceY = dy * cohesionStrength;
+                    Matter.Body.applyForce(sphere, sphere.position, { x: forceX, y: forceY });
                 }
-            }
-        }
-    }
-    
-    toggleDeviceOrientation() {
-        if (this.isMobileDevice) {
-            if (this.isDeviceOrientationEnabled) {
-                this.isDeviceOrientationEnabled = false;
-                // Reset to default gravity and flip state when disabled
-                this.deviceGravity = { x: 0, y: this.params.gravity };
-                this.deviceFlipState = false;
-                // Reset stairs to normal state
-                this.switchStairsForOrientation();
-            } else {
-                this.setupDeviceOrientation();
-            }
-        }
+            });
+        });
     }
     
     reset() {
@@ -887,48 +718,69 @@ export class OilTimer {
     flip() {
         this.isFlipped = !this.isFlipped;
         
-        // Switch physics and visibility of normal and inverted plates
-        this.staticBodies.forEach(body => {
-            if (body.isInverted !== undefined) {
-                if (this.isFlipped) {
-                    // When flipped, use inverted plates for physics, normal plates for display only
-                    if (body.isInverted) {
-                        // Inverted plates: enable physics, invisible (will show on glass canvas)
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0001; // Enable physics collision
-                    } else {
-                        // Normal plates: disable physics, show as gray display only
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0000; // Disable physics collision
-                    }
-                } else {
-                    // When normal, use normal plates for physics, inverted plates for display only
-                    if (body.isInverted) {
-                        // Inverted plates: disable physics, show as gray display only
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0000; // Disable physics collision
-                    } else {
-                        // Normal plates: enable physics, invisible (will show on glass canvas)
-                        body.render.visible = false;
-                        body.collisionFilter.mask = 0x0001; // Enable physics collision
-                    }
-                }
-            }
+        // Add some impulse to all spheres when flipping for dramatic effect
+        this.mochiParticles.forEach(mochiParticle => {
+            mochiParticle.spheres.forEach(sphere => {
+                const impulse = {
+                    x: (Math.random() - 0.5) * 0.02,
+                    y: this.isFlipped ? -0.015 : 0.015
+                };
+                Matter.Body.applyForce(sphere, sphere.position, impulse);
+            });
         });
         
-        // Add some impulse to particles when flipping
-        this.particles.forEach(particle => {
-            const impulse = {
-                x: (Math.random() - 0.5) * 0.02,
-                y: this.isFlipped ? -0.02 : 0.02
-            };
-            Matter.Body.applyForce(particle, particle.position, impulse);
-        });
-        
-        // Update glass display
-        this.renderGlassStructure();
+        // Update structure displays
+        this.renderStairs();
+        this.renderWalls();
     }
     
+    spawnOilParticle() {
+        const isMobile = this.canvas.width < 768;
+        const containerWidth = isMobile ? this.canvas.width * 0.9 : this.canvas.width * 0.45;
+        const containerX = (this.canvas.width - containerWidth) / 2;
+        
+        // Spawn position at left upper area near the stairs
+        const spawnX = containerX + 50; // Left side with some randomness
+        const spawnY = 0; // Top area with some randomness
+        
+        const mochiParticle = this.createMochiParticle(spawnX, spawnY, this.nextParticleIndex);
+        this.mochiParticles.push(mochiParticle);
+        this.nextParticleIndex++;
+        
+        // Add to physics world
+        Matter.World.add(this.world, mochiParticle.spheres);
+        Matter.World.add(this.world, mochiParticle.constraints);
+        
+        console.log(`Spawned oil particle #${mochiParticle.index} at (${spawnX.toFixed(1)}, ${spawnY.toFixed(1)})`);
+    }
+    
+    updateOilSpawning() {
+        const currentTime = performance.now();
+        
+        if (currentTime - this.lastSpawnTime >= this.params.spawnInterval) {
+            this.spawnOilParticle();
+            this.lastSpawnTime = currentTime;
+        }
+    }
+    
+    removeOffScreenParticles() {
+        const screenHeight = this.canvas.height;
+        const removalThreshold = screenHeight + 100; // Add some buffer to ensure complete removal
+        
+        // Check each mochi particle system
+        this.mochiParticles = this.mochiParticles.filter(mochiParticle => {
+            // Check if the center sphere has fallen below the screen
+            const centerY = mochiParticle.centerSphere.position.y;
+            
+            if (centerY > removalThreshold) {
+                // Remove this mochi particle system from the physics world
+                this.removeMochiParticle(mochiParticle);
+                return false; // Remove from array
+            }
+            
+            return true; // Keep in array
+        });
+    }
     
     updateFPS() {
         this.frameCount++;
@@ -941,25 +793,29 @@ export class OilTimer {
             // Update UI
             const fpsElement = document.getElementById('fps');
             const particleCountElement = document.getElementById('particleCount');
+            const totalSpheres = this.mochiParticles.reduce((sum, mp) => sum + mp.spheres.length, 0);
             
             if (fpsElement) fpsElement.textContent = this.fps;
-            if (particleCountElement) particleCountElement.textContent = this.particles.length;
+            if (particleCountElement) particleCountElement.textContent = `${this.mochiParticles.length} (${totalSpheres} spheres)`;
         }
     }
     
     animate() {
-        
-        
         this.updatePhysics();
         
         // Update Matter.js engine
         Matter.Engine.update(this.engine, 1000 / 60);
         
-        // Clear main canvas background
-        const ctx = this.canvas.getContext('2d');
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Spawn new oil particles at intervals
+        this.updateOilSpawning();
         
-        // Render particles only (glass is on separate canvas)
+        // Remove oil particles that have fallen below the screen
+        this.removeOffScreenParticles();
+        
+        // Clear oil canvas background
+        this.oilCtx.clearRect(0, 0, this.oilCanvas.width, this.oilCanvas.height);
+        
+        // Render particles and constraints
         Matter.Render.world(this.render);
         
         this.updateFPS();
