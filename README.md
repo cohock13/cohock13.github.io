@@ -46,4 +46,19 @@
 
  制御工学のTAで作成した二次遅れ系のシミュレータ．<br>
  固有角周波数と減衰比を右上のGUIから調節．<br>
- 
+
+## Oil Timer
+
+https://cohock13.github.io/models/oil-timer/
+
+油の流動を物理エンジンで再現したタイマーシミュレータ．<br>
+Matter.jsによる軟体物理とSVGフィルタによる流体効果を組み合わせた視覚表現．<br>
+
+流体の表現については以下のコードを参考にしています：
+- Canvas Liquid Effect by n3r4zzurr0  
+  https://github.com/n3r4zzurr0/canvas-liquid-effect  
+  Licensed under the MIT License
+
+## License
+MIT
+

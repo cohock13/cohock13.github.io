@@ -1,3 +1,13 @@
+/**
+ * Oil Timer Simulator
+ * 
+ * This implementation includes liquid effect techniques inspired by:
+ * "Canvas Liquid Effect" by n3r4zzurr0
+ * https://github.com/n3r4zzurr0/canvas-liquid-effect
+ * 
+ * The SVG filter approach for creating liquid-like visual effects
+ * is adapted from the above repository.
+ */
 export class OilTimer {
     constructor() {
         this.canvas = document.getElementById('canvas');
@@ -36,18 +46,18 @@ export class OilTimer {
                 showAngleIndicator: false,
                 showVelocity: false,
                 showDebug: false,
-                showStaticBodies: false
+                showStaticBodies: true,
             }
         });
         
         // Physics settings
-        this.engine.world.gravity.y = 0.8;
+        this.engine.world.gravity.y = 1.0;
         this.engine.world.gravity.x = 0;
         
         // Simulation state
         this.isFlipped = false;
-        this.liquidFilterEnabled = true;
-        this.mochiParticles = [];    // Array of mochi particle systems
+        this.liquidFilterEnabled = false;
+        this.liquidParticles = [];    // Array of liquid particle systems
         this.staticBodies = [];
         
         // Oil spawning state
@@ -61,29 +71,29 @@ export class OilTimer {
         
         // Physics parameters
         this.params = {
-            gravity: 2.0,
-            particleCount: 6,        // Number of mochi particle systems (not used for spawning)
+            gravity: 1.0,
+            particleCount: 6,        // Number of liquid particle systems (not used for spawning)
             oilColor: '#ff6b35',
             spawnInterval: 2000      // Oil spawn interval in milliseconds
         };
         
-        // Mochi particle system parameters (based on p5js soft body physics)
-        this.mochiParams = {
-            spheresPerParticle: 7,      // Number of spheres per mochi particle (1 center + 6 outer)
-            sphereRadius: 10,           // Radius of each sphere
-            stiffness: 0.08,            // Spring stiffness (低いほど柔らかい)
-            damping: 0.2,             // Spring damping (高いと動きがぬるっと止まる)
+        // Liquid particle system parameters (based on p5js soft body physics)
+        this.liquidSystemParams = {
+            spheresPerParticle: 7,      // Number of spheres per liquid particle (1 center + 6 outer)
+            sphereRadius: 3,           // Radius of each sphere
+            stiffness: 0.13,            // Spring stiffness (低いほど柔らかい)
+            damping: 0.000,             // Spring damping (高いと動きがぬるっと止まる)
             restitution: 0,            // Bounce factor for individual spheres
-            length: 30,                // Spring natural length (少し短めにすると収縮力が働く)
-            friction: 0,
-            frictionAir: 0,
-            density: 0.003,
-            centerMass: 0.65,           // Center sphere mass multiplier
-            outerMass: 0.2,            // Outer spheres mass multiplier
-            constraintVisible: false,  // Show spring constraints
-            // Advanced mochi parameters
-            outerSpringStiffness: 0.15, // Stiffness between outer spheres
-            compressionForce: 0.8,     // Force that keeps spheres together
+            length: 15,                // Spring natural length (少し短めにすると収縮力が働く)
+            friction: 0.0075,
+            frictionAir: 0.004,
+            density: 0.01,
+            centerMass: 0.30,           // Center sphere mass multiplier
+            outerMass: 0.05,            // Outer spheres mass multiplier
+            constraintVisible: true,  // Show spring constraints
+            // Advanced liquid parameters
+            outerSpringStiffness: 0.13, // Stiffness between outer spheres
+            compressionForce: 0.5,     // Force that keeps spheres together
             surfaceTension: 0.2        // Surface tension effect
         };
         
@@ -100,7 +110,7 @@ export class OilTimer {
         this.animate();
         
         // Expose to global scope for debugging
-        window.mochiOilTimer = this;
+        window.liquidOilTimer = this;
     }
     
     setupCanvasLayers() {
@@ -224,17 +234,31 @@ export class OilTimer {
         
         const gui = new window.lil.GUI({ title: 'オイルタイマー 設定' });
         
-        // Only the 5 requested controls
+        // Basic controls
         gui.add(this.params, 'spawnInterval', 500, 3000, 100).name('オイル出現間隔 (ms)');
         gui.addColor(this.params, 'oilColor').name('色').onChange(() => {
-            this.updateMochiProperties();
+            this.updateLiquidProperties();
         });
-        gui.add(this.mochiParams, 'constraintVisible').name('ばね表示').onChange(() => {
+        gui.add(this.liquidSystemParams, 'constraintVisible').name('ばね表示').onChange(() => {
             this.updateConstraintVisibility();
         });
         gui.add(this, 'liquidFilterEnabled').name('流体効果 ON/OFF').onChange(() => {
             this.updateLiquidFilter();
         });
+        
+        // Liquid effect parameters folder
+        const liquidEffectFolder = gui.addFolder('流体効果パラメータ');
+        liquidEffectFolder.add(this.liquidParams, 'blurRadius', 0, 50, 1).name('ブラー半径').onChange(() => {
+            this.updateLiquidFilter();
+        });
+        liquidEffectFolder.add(this.liquidParams, 'threshold', 0, 200, 1).name('結合閾値').onChange(() => {
+            this.updateLiquidFilter();
+        });
+        liquidEffectFolder.add(this.liquidParams, 'sharpness', 0, 20, 0.5).name('シャープネス').onChange(() => {
+            this.updateLiquidFilter();
+        });
+        liquidEffectFolder.open();
+        
         gui.add(this, 'reset').name('リセット');
     }
     
@@ -246,21 +270,21 @@ export class OilTimer {
         // Re-add mouse constraint
         Matter.World.add(this.world, this.mouseConstraint);
         
-        this.mochiParticles = [];
+        this.liquidParticles = [];
         this.staticBodies = [];
         
         // Create glass container structure
         this.createGlassStructure();
         
-        // Create mochi oil particles
-        this.createMochiParticles();
+        // Create liquid oil particles
+        this.createLiquidParticles();
         
         // Render structures on separate canvases
         this.renderBackground();
         this.renderStairs();
         this.renderWalls();
         
-        console.log(`Created ${this.mochiParticles.length} mochi particles and ${this.staticBodies.length} static bodies`);
+        console.log(`Created ${this.liquidParticles.length} liquid particles and ${this.staticBodies.length} static bodies`);
     }
     
     separateStructuresForRendering() {
@@ -295,8 +319,8 @@ export class OilTimer {
             Matter.Bodies.rectangle(containerX + containerWidth + thickness/2, height/2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } })
         );
         
-        // Create stairs for testing mochi behavior - similar to original oil timer
-        this.createMochiTestStairs(glassWalls, containerX, containerWidth, thickness, height);
+        // Create stairs for testing liquid behavior - similar to original oil timer
+        this.createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height);
         
         this.staticBodies = glassWalls;
         Matter.World.add(this.world, glassWalls);
@@ -305,13 +329,13 @@ export class OilTimer {
         this.separateStructuresForRendering();
     }
     
-    createMochiTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
-        const plateCount = 3;
-        const stepsPerPlate = 4;
-        const stepHeight = 150; // 各ステップの縦の進み幅（≒最小マージン）
+    createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
+        const plateCount = 10;
+        const stepsPerPlate = 12;
+        const stepHeight = 40; // 各ステップの縦の進み幅（≒最小マージン）
         const stepWidth = containerWidth * 0.9;
-        const topY = 80; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
-        const margin = 50;
+        const topY = 30; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
+        const margin = 30;
         
         for (let i = 0; i < plateCount; i++) {
             let baseY;
@@ -328,23 +352,34 @@ export class OilTimer {
             const isLeftOriented = i % 2 === 0;
 
             for (let j = 0; j < stepsPerPlate; j++) {
+                // First step (j=0) has 5x steeper angle to prevent oil from getting stuck
+                const baseAngle = 0.05;
+                const angleMultiplier = j === 0 ? 7.5 : 1;  // steeper for first step
+                const stepAngle = (isLeftOriented ? baseAngle : -baseAngle) * angleMultiplier;
+                
                 const stepX = isLeftOriented
                     ? containerX + (stepWidth / stepsPerPlate) * (j + 0.5)
                     : containerX + containerWidth - (stepWidth / stepsPerPlate) * (j + 0.5);
 
                 const stepY = baseY + j * (stepHeight / 2);
-
+                
+                // Only first two steps (j=0 and j=1) have wider overlap to fill gap, others are normal size
+                const stepWidthIndividual = (j === 0 || j === 1) 
+                    ? (stepWidth / stepsPerPlate) * 1.1  // 10% overlap for first two steps
+                    : stepWidth / stepsPerPlate;         // Normal size for other steps
+                
                 const stepSurface = Matter.Bodies.rectangle(
                     stepX,
                     stepY,
-                    stepWidth / stepsPerPlate,
+                    stepWidthIndividual,
                     thickness * 0.6,
                     {
                         isStatic: true,
-                        angle: isLeftOriented ? 0.05 : -0.05,
+                        angle: stepAngle,
                         friction: 0,
                         frictionStatic: 0,
                         restitution: 0,
+                        chamfer: { radius: 6 },
                         render: { visible: false }
                     }
                 );
@@ -354,61 +389,63 @@ export class OilTimer {
         }
     }
 
-    createMochiParticles() {
-        // Remove existing mochi particle systems
-        this.mochiParticles.forEach(mochiParticle => {
-            this.removeMochiParticle(mochiParticle);
+    createLiquidParticles() {
+        // Remove existing liquid particle systems
+        this.liquidParticles.forEach(liquidParticle => {
+            this.removeLiquidParticle(liquidParticle);
         });
         
-        this.mochiParticles = [];
+        this.liquidParticles = [];
         this.nextParticleIndex = 0;
         
         // No initial particles - they will be spawned automatically
     }
     
-    createMochiParticle(centerX, centerY, index) {
+    createLiquidParticle(centerX, centerY, index) {
         const spheres = [];
         const constraints = [];
-        const numSpheres = this.mochiParams.spheresPerParticle;
-        const radius = this.mochiParams.sphereRadius;
+        const numSpheres = this.liquidSystemParams.spheresPerParticle;
+        const radius = this.liquidSystemParams.sphereRadius;
         
-        // Create center sphere (acts as the core of the mochi particle)
+        // Create center sphere (acts as the core of the liquid particle)
         const centerSphere = Matter.Bodies.circle(centerX, centerY, radius, {
-            restitution: this.mochiParams.restitution,
-            friction: this.mochiParams.friction,
-            frictionAir: this.mochiParams.frictionAir,
-            density: this.mochiParams.density * this.mochiParams.centerMass,
+            restitution: this.liquidSystemParams.restitution,
+            friction: this.liquidSystemParams.friction,
+            frictionAir: this.liquidSystemParams.frictionAir,
+            density: this.liquidSystemParams.density * this.liquidSystemParams.centerMass,
             render: {
                 fillStyle: this.params.oilColor,
                 strokeStyle: 'transparent',
                 lineWidth: 0
             },
-            mochiIndex: index,
+            liquidIndex: index,
             sphereType: 'center'
         });
         spheres.push(centerSphere);
         
-        // Create outer spheres arranged in a circle around center
+        // Create outer spheres arranged in an ellipse around center (horizontal 1.5x vertical)
         const outerCount = numSpheres - 1;
         const angleStep = (2 * Math.PI) / outerCount;
-        const arrangementRadius = this.mochiParams.length * 0.7;
+        const baseRadius = this.liquidSystemParams.length * 0.7;
+        const horizontalRadius = baseRadius * 1.5; // 1.5x horizontal
+        const verticalRadius = baseRadius * 1.0;   // 1.0x vertical
         
         for (let i = 0; i < outerCount; i++) {
             const angle = i * angleStep;
-            const x = centerX + Math.cos(angle) * arrangementRadius;
-            const y = centerY + Math.sin(angle) * arrangementRadius;
+            const x = centerX + Math.cos(angle) * horizontalRadius;
+            const y = centerY + Math.sin(angle) * verticalRadius;
             
             const outerSphere = Matter.Bodies.circle(x, y, radius * 0.85, {
-                restitution: this.mochiParams.restitution,
-                friction: this.mochiParams.friction,
-                frictionAir: this.mochiParams.frictionAir,
-                density: this.mochiParams.density * this.mochiParams.outerMass,
+                restitution: this.liquidSystemParams.restitution,
+                friction: this.liquidSystemParams.friction,
+                frictionAir: this.liquidSystemParams.frictionAir,
+                density: this.liquidSystemParams.density * this.liquidSystemParams.outerMass,
                 render: {
                     fillStyle: this.params.oilColor,
                     strokeStyle: 'transparent',
                     lineWidth: 0
                 },
-                mochiIndex: index,
+                liquidIndex: index,
                 sphereType: 'outer',
                 outerIndex: i
             });
@@ -419,11 +456,11 @@ export class OilTimer {
             const centerConstraint = Matter.Constraint.create({
                 bodyA: centerSphere,
                 bodyB: outerSphere,
-                length: this.mochiParams.length,
-                stiffness: this.mochiParams.stiffness,
-                damping: this.mochiParams.damping,
+                length: this.liquidSystemParams.length,
+                stiffness: this.liquidSystemParams.stiffness,
+                damping: this.liquidSystemParams.damping,
                 render: {
-                    visible: this.mochiParams.constraintVisible,
+                    visible: this.liquidSystemParams.constraintVisible,
                     strokeStyle: 'rgba(255, 255, 255, 0.3)',
                     lineWidth: 1
                 }
@@ -438,11 +475,11 @@ export class OilTimer {
             const outerConstraint = Matter.Constraint.create({
                 bodyA: spheres[1 + i], // outer spheres start at index 1
                 bodyB: spheres[1 + nextIndex],
-                length: this.mochiParams.length * 1.1, // Slightly longer for flexibility
-                stiffness: this.mochiParams.outerSpringStiffness, // Softer connection
-                damping: this.mochiParams.damping * 0.8,
+                length: this.liquidSystemParams.length * 1.1, // Slightly longer for flexibility
+                stiffness: this.liquidSystemParams.outerSpringStiffness, // Softer connection
+                damping: this.liquidSystemParams.damping * 0.8,
                 render: {
-                    visible: this.mochiParams.constraintVisible,
+                    visible: this.liquidSystemParams.constraintVisible,
                     strokeStyle: 'rgba(255, 255, 255, 0.2)',
                     lineWidth: 1
                 }
@@ -458,11 +495,11 @@ export class OilTimer {
                 const crossConstraint = Matter.Constraint.create({
                     bodyA: spheres[1 + i],
                     bodyB: spheres[1 + oppositeIndex],
-                    length: this.mochiParams.length * 1.8,
-                    stiffness: this.mochiParams.stiffness * 0.3, // Much softer for internal structure
-                    damping: this.mochiParams.damping * 1.2,
+                    length: this.liquidSystemParams.length * 1.8,
+                    stiffness: this.liquidSystemParams.stiffness * 0.3, // Much softer for internal structure
+                    damping: this.liquidSystemParams.damping * 1.2,
                     render: {
-                        visible: this.mochiParams.constraintVisible,
+                        visible: this.liquidSystemParams.constraintVisible,
                         strokeStyle: 'rgba(255, 255, 255, 0.1)',
                         lineWidth: 1
                     }
@@ -480,79 +517,81 @@ export class OilTimer {
         };
     }
     
-    removeMochiParticle(mochiParticle) {
-        if (mochiParticle.spheres.length > 0) {
-            Matter.World.remove(this.world, mochiParticle.spheres);
+    removeLiquidParticle(liquidParticle) {
+        if (liquidParticle.spheres.length > 0) {
+            Matter.World.remove(this.world, liquidParticle.spheres);
         }
-        if (mochiParticle.constraints.length > 0) {
-            Matter.World.remove(this.world, mochiParticle.constraints);
+        if (liquidParticle.constraints.length > 0) {
+            Matter.World.remove(this.world, liquidParticle.constraints);
         }
     }
     
-    recreateMochiSystem() {
+    recreateLiquidSystem() {
         // Store current center positions and velocities
-        const positions = this.mochiParticles.map(mp => ({
+        const positions = this.liquidParticles.map(mp => ({
             x: mp.centerSphere.position.x,
             y: mp.centerSphere.position.y,
             vx: mp.centerSphere.velocity.x,
             vy: mp.centerSphere.velocity.y
         }));
         
-        // Recreate all mochi particles
-        this.createMochiParticles();
+        // Recreate all liquid particles
+        this.createLiquidParticles();
         
         // Restore center positions and velocities if possible
-        for (let i = 0; i < Math.min(positions.length, this.mochiParticles.length); i++) {
-            const center = this.mochiParticles[i].centerSphere;
+        for (let i = 0; i < Math.min(positions.length, this.liquidParticles.length); i++) {
+            const center = this.liquidParticles[i].centerSphere;
             Matter.Body.setPosition(center, { x: positions[i].x, y: positions[i].y });
             Matter.Body.setVelocity(center, { x: positions[i].vx, y: positions[i].vy });
             
-            // Arrange outer spheres around new center position with slight random offset
-            const mochiParticle = this.mochiParticles[i];
-            const outerCount = mochiParticle.spheres.length - 1;
+            // Arrange outer spheres around new center position in elliptical pattern with slight random offset
+            const liquidParticle = this.liquidParticles[i];
+            const outerCount = liquidParticle.spheres.length - 1;
             const angleStep = (2 * Math.PI) / outerCount;
-            const arrangementRadius = this.mochiParams.length * 0.7;
+            const baseRadius = this.liquidSystemParams.length * 0.7;
+            const horizontalRadius = baseRadius * 1.5; // 1.5x horizontal
+            const verticalRadius = baseRadius * 1.0;   // 1.0x vertical
             
             for (let j = 0; j < outerCount; j++) {
                 const angle = j * angleStep + (Math.random() - 0.5) * 0.3; // Small random offset
-                const x = positions[i].x + Math.cos(angle) * arrangementRadius;
-                const y = positions[i].y + Math.sin(angle) * arrangementRadius;
-                Matter.Body.setPosition(mochiParticle.spheres[1 + j], { x, y });
+                const x = positions[i].x + Math.cos(angle) * horizontalRadius;
+                const y = positions[i].y + Math.sin(angle) * verticalRadius;
+                Matter.Body.setPosition(liquidParticle.spheres[1 + j], { x, y });
             }
         }
     }
     
-    updateMochiConstraints() {
-        this.mochiParticles.forEach(mochiParticle => {
-            mochiParticle.constraints.forEach((constraint, index) => {
-                const outerCount = mochiParticle.spheres.length - 1;
+    updateLiquidConstraints() {
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.constraints.forEach((constraint, index) => {
+                const outerCount = liquidParticle.spheres.length - 1;
                 
                 if (index < outerCount) {
                     // Center-to-outer constraints
-                    constraint.length = this.mochiParams.length;
-                    constraint.stiffness = this.mochiParams.stiffness;
-                    constraint.damping = this.mochiParams.damping;
+                    constraint.length = this.liquidSystemParams.length;
+                    constraint.stiffness = this.liquidSystemParams.stiffness;
+                    constraint.damping = this.liquidSystemParams.damping;
                 } else if (index < outerCount * 2) {
                     // Outer-to-outer adjacent constraints
-                    constraint.length = this.mochiParams.length * 1.1;
-                    constraint.stiffness = this.mochiParams.outerSpringStiffness;
-                    constraint.damping = this.mochiParams.damping * 0.8;
+                    constraint.length = this.liquidSystemParams.length * 1.1;
+                    constraint.stiffness = this.liquidSystemParams.outerSpringStiffness;
+                    constraint.damping = this.liquidSystemParams.damping * 0.8;
                 } else {
                     // Cross constraints
-                    constraint.length = this.mochiParams.length * 1.8;
-                    constraint.stiffness = this.mochiParams.stiffness * 0.3;
-                    constraint.damping = this.mochiParams.damping * 1.2;
+                    constraint.length = this.liquidSystemParams.length * 1.8;
+                    constraint.stiffness = this.liquidSystemParams.stiffness * 0.3;
+                    constraint.damping = this.liquidSystemParams.damping * 1.2;
                 }
             });
         });
     }
     
-    updateMochiSphereSize() {
-        this.mochiParticles.forEach(mochiParticle => {
-            mochiParticle.spheres.forEach((sphere, index) => {
+    updateLiquidSphereSize() {
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.spheres.forEach((sphere, index) => {
                 const targetRadius = index === 0 ? 
-                    this.mochiParams.sphereRadius : 
-                    this.mochiParams.sphereRadius * 0.85;
+                    this.liquidSystemParams.sphereRadius : 
+                    this.liquidSystemParams.sphereRadius * 0.85;
                 const currentRadius = sphere.circleRadius || targetRadius;
                 
                 if (Math.abs(currentRadius - targetRadius) > 0.1) {
@@ -564,12 +603,12 @@ export class OilTimer {
         });
     }
     
-    updateMochiProperties() {
-        this.mochiParticles.forEach(mochiParticle => {
-            mochiParticle.spheres.forEach(sphere => {
-                sphere.restitution = this.mochiParams.restitution;
-                sphere.friction = this.mochiParams.friction;
-                sphere.frictionAir = this.mochiParams.frictionAir;
+    updateLiquidProperties() {
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.spheres.forEach(sphere => {
+                sphere.restitution = this.liquidSystemParams.restitution;
+                sphere.friction = this.liquidSystemParams.friction;
+                sphere.frictionAir = this.liquidSystemParams.frictionAir;
                 
                 // Update color
                 if (sphere.render) {
@@ -579,21 +618,21 @@ export class OilTimer {
         });
     }
     
-    updateMochiMasses() {
-        this.mochiParticles.forEach(mochiParticle => {
-            mochiParticle.spheres.forEach((sphere, index) => {
+    updateLiquidMasses() {
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.spheres.forEach((sphere, index) => {
                 const massMultiplier = index === 0 ? 
-                    this.mochiParams.centerMass : 
-                    this.mochiParams.outerMass;
-                Matter.Body.setDensity(sphere, this.mochiParams.density * massMultiplier);
+                    this.liquidSystemParams.centerMass : 
+                    this.liquidSystemParams.outerMass;
+                Matter.Body.setDensity(sphere, this.liquidSystemParams.density * massMultiplier);
             });
         });
     }
     
     updateConstraintVisibility() {
-        this.mochiParticles.forEach(mochiParticle => {
-            mochiParticle.constraints.forEach(constraint => {
-                constraint.render.visible = this.mochiParams.constraintVisible;
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.constraints.forEach(constraint => {
+                constraint.render.visible = this.liquidSystemParams.constraintVisible;
             });
         });
     }
@@ -667,18 +706,18 @@ export class OilTimer {
         this.engine.world.gravity.x = 0;
         this.engine.world.gravity.y = this.isFlipped ? -this.params.gravity : this.params.gravity;
         
-        // Update all mochi particle properties
-        this.updateMochiProperties();
+        // Update all liquid particle properties
+        this.updateLiquidProperties();
         
-        // Apply subtle forces for mochi behavior enhancement
-        this.applyMochiForces();
+        // Apply subtle forces for liquid behavior enhancement
+        this.applyLiquidForces();
     }
     
-    applyMochiForces() {
-        // Apply additional forces to enhance mochi-like behavior
-        this.mochiParticles.forEach(mochiParticle => {
-            const centerSphere = mochiParticle.centerSphere;
-            const outerSpheres = mochiParticle.spheres.slice(1);
+    applyLiquidForces() {
+        // Apply additional forces to enhance liquid-like behavior
+        this.liquidParticles.forEach(liquidParticle => {
+            const centerSphere = liquidParticle.centerSphere;
+            const outerSpheres = liquidParticle.spheres.slice(1);
             
             // Calculate center of mass
             let totalMass = centerSphere.mass;
@@ -694,15 +733,15 @@ export class OilTimer {
             comX /= totalMass;
             comY /= totalMass;
             
-            // Apply gentle cohesion force to keep mochi together
-            const cohesionStrength = 0.0002 * this.mochiParams.compressionForce;
+            // Apply gentle cohesion force to keep liquid together
+            const cohesionStrength = 0.0002 * this.liquidSystemParams.compressionForce;
             
             outerSpheres.forEach(sphere => {
                 const dx = comX - sphere.position.x;
                 const dy = comY - sphere.position.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance > this.mochiParams.length * 1.5) {
+                if (distance > this.liquidSystemParams.length * 1.5) {
                     const forceX = dx * cohesionStrength;
                     const forceY = dy * cohesionStrength;
                     Matter.Body.applyForce(sphere, sphere.position, { x: forceX, y: forceY });
@@ -719,8 +758,8 @@ export class OilTimer {
         this.isFlipped = !this.isFlipped;
         
         // Add some impulse to all spheres when flipping for dramatic effect
-        this.mochiParticles.forEach(mochiParticle => {
-            mochiParticle.spheres.forEach(sphere => {
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.spheres.forEach(sphere => {
                 const impulse = {
                     x: (Math.random() - 0.5) * 0.02,
                     y: this.isFlipped ? -0.015 : 0.015
@@ -743,15 +782,15 @@ export class OilTimer {
         const spawnX = containerX + 50; // Left side with some randomness
         const spawnY = 0; // Top area with some randomness
         
-        const mochiParticle = this.createMochiParticle(spawnX, spawnY, this.nextParticleIndex);
-        this.mochiParticles.push(mochiParticle);
+        const liquidParticle = this.createLiquidParticle(spawnX, spawnY, this.nextParticleIndex);
+        this.liquidParticles.push(liquidParticle);
         this.nextParticleIndex++;
         
         // Add to physics world
-        Matter.World.add(this.world, mochiParticle.spheres);
-        Matter.World.add(this.world, mochiParticle.constraints);
+        Matter.World.add(this.world, liquidParticle.spheres);
+        Matter.World.add(this.world, liquidParticle.constraints);
         
-        console.log(`Spawned oil particle #${mochiParticle.index} at (${spawnX.toFixed(1)}, ${spawnY.toFixed(1)})`);
+        console.log(`Spawned oil particle #${liquidParticle.index} at (${spawnX.toFixed(1)}, ${spawnY.toFixed(1)})`);
     }
     
     updateOilSpawning() {
@@ -767,14 +806,14 @@ export class OilTimer {
         const screenHeight = this.canvas.height;
         const removalThreshold = screenHeight + 100; // Add some buffer to ensure complete removal
         
-        // Check each mochi particle system
-        this.mochiParticles = this.mochiParticles.filter(mochiParticle => {
+        // Check each liquid particle system
+        this.liquidParticles = this.liquidParticles.filter(liquidParticle => {
             // Check if the center sphere has fallen below the screen
-            const centerY = mochiParticle.centerSphere.position.y;
+            const centerY = liquidParticle.centerSphere.position.y;
             
             if (centerY > removalThreshold) {
-                // Remove this mochi particle system from the physics world
-                this.removeMochiParticle(mochiParticle);
+                // Remove this liquid particle system from the physics world
+                this.removeLiquidParticle(liquidParticle);
                 return false; // Remove from array
             }
             
@@ -793,10 +832,10 @@ export class OilTimer {
             // Update UI
             const fpsElement = document.getElementById('fps');
             const particleCountElement = document.getElementById('particleCount');
-            const totalSpheres = this.mochiParticles.reduce((sum, mp) => sum + mp.spheres.length, 0);
+            const totalSpheres = this.liquidParticles.reduce((sum, mp) => sum + mp.spheres.length, 0);
             
             if (fpsElement) fpsElement.textContent = this.fps;
-            if (particleCountElement) particleCountElement.textContent = `${this.mochiParticles.length} (${totalSpheres} spheres)`;
+            if (particleCountElement) particleCountElement.textContent = `${this.liquidParticles.length} (${totalSpheres} spheres)`;
         }
     }
     
