@@ -81,19 +81,19 @@ export class OilTimer {
         this.liquidSystemParams = {
             spheresPerParticle: 7,      // Number of spheres per liquid particle (1 center + 6 outer)
             sphereRadius: 3,           // Radius of each sphere
-            stiffness: 0.13,            // Spring stiffness (低いほど柔らかい)
+            stiffness: 0.15,            // Spring stiffness (低いほど柔らかい)
             damping: 0.000,             // Spring damping (高いと動きがぬるっと止まる)
             restitution: 0,            // Bounce factor for individual spheres
             length: 15,                // Spring natural length (少し短めにすると収縮力が働く)
-            friction: 0.0075,
-            frictionAir: 0.004,
+            friction: 0.00,
+            frictionAir: 0.02,
             density: 0.01,
-            centerMass: 0.30,           // Center sphere mass multiplier
+            centerMass: 0.20,           // Center sphere mass multiplier
             outerMass: 0.05,            // Outer spheres mass multiplier
             constraintVisible: true,  // Show spring constraints
             // Advanced liquid parameters
-            outerSpringStiffness: 0.13, // Stiffness between outer spheres
-            compressionForce: 0.5,     // Force that keeps spheres together
+            outerSpringStiffness: 0.20, // Stiffness between outer spheres
+            compressionForce: 0.0,     // Force that keeps spheres together
             surfaceTension: 0.2        // Surface tension effect
         };
         
@@ -177,7 +177,7 @@ export class OilTimer {
     
     init() {
         // Setup Matter.js engine options
-        this.engine.world.gravity.scale = 0.001;
+        this.engine.world.gravity.scale = 0.0018;
         this.engine.enableSleeping = false;
         
         // Add mouse control
@@ -331,11 +331,12 @@ export class OilTimer {
     
     createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
         const plateCount = 10;
-        const stepsPerPlate = 12;
-        const stepHeight = 40; // 各ステップの縦の進み幅（≒最小マージン）
-        const stepWidth = containerWidth * 0.9;
+        const fixedStepWidth = 80; // 固定のstep幅
+        const stepHeight = 70; // 各ステップの縦の進み幅（≒最小マージン）
+        const availableWidth = containerWidth * 0.9; // 利用可能幅
+        const stepsPerPlate = Math.floor(availableWidth / fixedStepWidth); // 固定幅で埋められるstep数
         const topY = 30; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
-        const margin = 30;
+        const margin = 15;
         
         for (let i = 0; i < plateCount; i++) {
             let baseY;
@@ -354,19 +355,20 @@ export class OilTimer {
             for (let j = 0; j < stepsPerPlate; j++) {
                 // First step (j=0) has 5x steeper angle to prevent oil from getting stuck
                 const baseAngle = 0.05;
-                const angleMultiplier = j === 0 ? 7.5 : 1;  // steeper for first step
+                const angleMultiplier = j === 0 ? 7.5 : 1.5;  // steeper for first step
                 const stepAngle = (isLeftOriented ? baseAngle : -baseAngle) * angleMultiplier;
                 
+                // Calculate step position with fixed width (packed from container edge)
                 const stepX = isLeftOriented
-                    ? containerX + (stepWidth / stepsPerPlate) * (j + 0.5)
-                    : containerX + containerWidth - (stepWidth / stepsPerPlate) * (j + 0.5);
+                    ? containerX + fixedStepWidth * (j + 0.5)  // Pack from left
+                    : containerX + containerWidth - fixedStepWidth * (j + 0.5); // Pack from right
 
                 const stepY = baseY + j * (stepHeight / 2);
                 
-                // Only first two steps (j=0 and j=1) have wider overlap to fill gap, others are normal size
+                // Only first two steps (j=0 and j=1) have wider overlap to fill gap, others use fixed size
                 const stepWidthIndividual = (j === 0 || j === 1) 
-                    ? (stepWidth / stepsPerPlate) * 1.1  // 10% overlap for first two steps
-                    : stepWidth / stepsPerPlate;         // Normal size for other steps
+                    ? fixedStepWidth * 1.1  // 10% overlap for first two steps
+                    : fixedStepWidth;       // Fixed size for other steps
                 
                 const stepSurface = Matter.Bodies.rectangle(
                     stepX,
@@ -413,6 +415,9 @@ export class OilTimer {
             friction: this.liquidSystemParams.friction,
             frictionAir: this.liquidSystemParams.frictionAir,
             density: this.liquidSystemParams.density * this.liquidSystemParams.centerMass,
+            collisionFilter: {
+                group: -1  // Negative group means no collision with same group
+            },
             render: {
                 fillStyle: this.params.oilColor,
                 strokeStyle: 'transparent',
@@ -440,6 +445,9 @@ export class OilTimer {
                 friction: this.liquidSystemParams.friction,
                 frictionAir: this.liquidSystemParams.frictionAir,
                 density: this.liquidSystemParams.density * this.liquidSystemParams.outerMass,
+                collisionFilter: {
+                    group: -1  // Negative group means no collision with same group
+                },
                 render: {
                     fillStyle: this.params.oilColor,
                     strokeStyle: 'transparent',
