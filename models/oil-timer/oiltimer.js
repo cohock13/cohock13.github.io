@@ -74,7 +74,8 @@ export class OilTimer {
             gravity: 1.0,
             particleCount: 6,        // Number of liquid particle systems (not used for spawning)
             oilColor: '#ff6b35',
-            spawnInterval: 2000      // Oil spawn interval in milliseconds
+            spawnInterval: 2000,     // Oil spawn interval in milliseconds
+            containerWidth: 800      // Fixed oil timer container width in pixels
         };
         
         // Liquid particle system parameters (based on p5js soft body physics)
@@ -297,9 +298,8 @@ export class OilTimer {
         const height = this.canvas.height;
         const thickness = 20;
         
-        // Container dimensions - responsive width
-        const isMobile = width < 768;
-        const containerWidth = isMobile ? width * 0.9 : width * 0.45;
+        // Container dimensions - fixed width
+        const containerWidth = this.params.containerWidth;  // Use fixed container width
         const containerX = (width - containerWidth) / 2;
         
         // Container boundaries (invisible) - only left and right walls
@@ -335,7 +335,7 @@ export class OilTimer {
         const stepHeight = 70; // 各ステップの縦の進み幅（≒最小マージン）
         const availableWidth = containerWidth * 0.9; // 利用可能幅
         const stepsPerPlate = Math.floor(availableWidth / fixedStepWidth); // 固定幅で埋められるstep数
-        const topY = 30; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
+        const topY = 40; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
         const margin = 0;
         
         for (let i = 0; i < plateCount; i++) {
@@ -787,7 +787,7 @@ export class OilTimer {
         const containerX = (this.canvas.width - containerWidth) / 2;
         
         // Spawn position at left upper area near the stairs
-        const spawnX = containerX + 50; // Left side with some randomness
+        const spawnX = containerX + 100; // Left side with some randomness
         const spawnY = 0; // Top area with some randomness
         
         const liquidParticle = this.createLiquidParticle(spawnX, spawnY, this.nextParticleIndex);
