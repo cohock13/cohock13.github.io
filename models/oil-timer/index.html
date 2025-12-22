@@ -45,7 +45,17 @@
 </head>
 <body>
     <canvas id="canvas"></canvas>
-
+    
+    <!-- SVG Filters for liquid effect -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <filter id="liquid-filter" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 18 -7" result="liquid" />
+            </filter>
+        </defs>
+    </svg>
+    
     <script type="module" src="main.js"></script>
 </body>
 </html>

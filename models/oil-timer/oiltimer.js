@@ -34,7 +34,21 @@ export class OilTimer {
         this.engine = Matter.Engine.create();
         this.world = this.engine.world;
         
-        // Custom rendering (Matter.js renderer disabled)
+        // Use Matter.js built-in renderer for particles only on oil canvas
+        this.render = Matter.Render.create({
+            canvas: this.oilCanvas,
+            engine: this.engine,
+            options: {
+                width: this.oilCanvas.width,
+                height: this.oilCanvas.height,
+                wireframes: false,
+                background: 'transparent',
+                showAngleIndicator: false,
+                showVelocity: false,
+                showDebug: false,
+                showStaticBodies: true,
+            }
+        });
         
         // Physics settings
         this.engine.world.gravity.y = 1.0;
@@ -42,9 +56,9 @@ export class OilTimer {
         
         // Simulation state
         this.isFlipped = false;
+        this.liquidFilterEnabled = false;
         this.liquidParticles = [];    // Array of liquid particle systems
         this.staticBodies = [];
-        this.pinwheel = null;          // Rotating pinwheel
         
         // Oil spawning state
         this.lastSpawnTime = 0;
@@ -61,31 +75,36 @@ export class OilTimer {
             particleCount: 6,        // Number of liquid particle systems (not used for spawning)
             oilColor: '#ff6b35',
             spawnInterval: 2000,     // Oil spawn interval in milliseconds
-            containerWidth: 800,     // Fixed oil timer container width in pixels
-            pinwheelBlades: 4,       // Number of pinwheel blades
-            pinwheelOffsetX: 35       // Horizontal offset from oil spawn position (in pixels)
+            containerWidth: 800      // Fixed oil timer container width in pixels
         };
         
         // Liquid particle system parameters (based on p5js soft body physics)
         this.liquidSystemParams = {
             spheresPerParticle: 7,      // Number of spheres per liquid particle (1 center + 6 outer)
             sphereRadius: 3,           // Radius of each sphere
-            stiffness: 0.2,            // Spring stiffness (低いほど柔らかい)
+            stiffness: 0.13,            // Spring stiffness (低いほど柔らかい)
             damping: 0.000,             // Spring damping (高いと動きがぬるっと止まる)
             restitution: 0.0,            // Bounce factor for individual spheres
             length: 15,                // Spring natural length (少し短めにすると収縮力が働く)
-            friction: 0.1,
-            frictionAir: 0.000,
+            friction: 0.02,
+            frictionAir: 0.01,
             density: 0.01,
             centerMass: 0.20,           // Center sphere mass multiplier
             outerMass: 0.05,            // Outer spheres mass multiplier
             constraintVisible: true,  // Show spring constraints
             // Advanced liquid parameters
-            outerSpringStiffness: 0.3, // Stiffness between outer spheres
+            outerSpringStiffness: 0.2, // Stiffness between outer spheres
             compressionForce: 0.0,     // Force that keeps spheres together
             surfaceTension: 0.2        // Surface tension effect
         };
-
+        
+        // Liquid effect parameters
+        this.liquidParams = {
+            blurRadius: 20,
+            threshold: 50,
+            sharpness: 5
+        };
+        
         this.init();
         this.createWorld();
         this.setupGUI();
@@ -147,6 +166,14 @@ export class OilTimer {
         this.stairsCanvas.height = height;
         this.wallsCanvas.width = width;
         this.wallsCanvas.height = height;
+        
+        if (this.render) {
+            this.render.canvas = this.oilCanvas;
+            this.render.canvas.width = width;
+            this.render.canvas.height = height;
+            this.render.options.width = width;
+            this.render.options.height = height;
+        }
     }
     
     init() {
@@ -167,12 +194,37 @@ export class OilTimer {
         });
         
         Matter.World.add(this.world, this.mouseConstraint);
-
+        
         // Handle window resize
         window.addEventListener('resize', () => {
             this.resizeCanvas();
             this.createWorld();
         });
+        
+        // Apply initial filters
+        this.updateLiquidFilter();
+    }
+    
+    updateLiquidFilter() {
+        // Update SVG filter parameters
+        const filter = document.querySelector('#liquid-filter feGaussianBlur');
+        const colorMatrix = document.querySelector('#liquid-filter feColorMatrix');
+        
+        if (filter) {
+            filter.setAttribute('stdDeviation', this.liquidParams.blurRadius);
+        }
+        
+        if (colorMatrix) {
+            const matrixValues = `1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 ${this.liquidParams.threshold} -${this.liquidParams.sharpness}`;
+            colorMatrix.setAttribute('values', matrixValues);
+        }
+        
+        // Apply filter to oil canvas only
+        if (this.liquidFilterEnabled) {
+            this.oilCanvas.style.filter = 'url(#liquid-filter)';
+        } else {
+            this.oilCanvas.style.filter = 'none';
+        }
     }
     
     setupGUI() {
@@ -191,7 +243,23 @@ export class OilTimer {
         gui.add(this.liquidSystemParams, 'constraintVisible').name('ばね表示').onChange(() => {
             this.updateConstraintVisibility();
         });
-
+        gui.add(this, 'liquidFilterEnabled').name('流体効果 ON/OFF').onChange(() => {
+            this.updateLiquidFilter();
+        });
+        
+        // Liquid effect parameters folder
+        const liquidEffectFolder = gui.addFolder('流体効果パラメータ');
+        liquidEffectFolder.add(this.liquidParams, 'blurRadius', 0, 50, 1).name('ブラー半径').onChange(() => {
+            this.updateLiquidFilter();
+        });
+        liquidEffectFolder.add(this.liquidParams, 'threshold', 0, 200, 1).name('結合閾値').onChange(() => {
+            this.updateLiquidFilter();
+        });
+        liquidEffectFolder.add(this.liquidParams, 'sharpness', 0, 20, 0.5).name('シャープネス').onChange(() => {
+            this.updateLiquidFilter();
+        });
+        liquidEffectFolder.open();
+        
         gui.add(this, 'reset').name('リセット');
     }
     
@@ -249,117 +317,14 @@ export class OilTimer {
             Matter.Bodies.rectangle(containerX + containerWidth + thickness/2, height/2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } })
         );
         
-        // Create pinwheel
-        this.createPinwheel();
-
         // Create stairs for testing liquid behavior - similar to original oil timer
         this.createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height);
-
+        
         this.staticBodies = glassWalls;
         Matter.World.add(this.world, glassWalls);
-
+        
         // Separate stairs and walls for rendering
         this.separateStructuresForRendering();
-    }
-
-    createPinwheel() {
-        // Pinwheel position - with proper spacing from oil spawn and first step
-        const width = this.canvas.width;
-        const responsiveContainerWidth = width < 900 ? width * 0.92 : this.params.containerWidth;
-        const actualContainerX = (width - responsiveContainerWidth) / 2;
-
-        const baseStepWidth = 80;
-        const availableWidth = responsiveContainerWidth * 0.9;
-        const minSteps = 3;
-        const calculatedSteps = Math.floor(availableWidth / baseStepWidth);
-        const stepsPerPlate = Math.max(minSteps, calculatedSteps);
-        const actualStepWidth = availableWidth / stepsPerPlate;
-
-        const topY = 100; // First step Y position (moved down to make room)
-        const spawnY = 50; // Oil spawn Y position (safe margin from top)
-
-        // Pinwheel size - smaller to not overlap with center
-        const pinwheelRadius = responsiveContainerWidth * 0.08; // Slightly smaller
-
-        // Pinwheel position with proper spacing
-        const pinwheelX = actualContainerX + actualStepWidth * 0.5 + this.params.pinwheelOffsetX;
-        const marginAbovePinwheel = 20; // Margin between spawn and pinwheel
-        const marginBelowPinwheel = 20; // Margin between pinwheel and first step
-
-        // Position pinwheel between spawn and first step
-        const pinwheelY = spawnY + marginAbovePinwheel + pinwheelRadius;
-
-        // Create static center anchor (invisible, collision-free)
-        const centerRadius = 5;
-        const centerAnchor = Matter.Bodies.circle(pinwheelX, pinwheelY, centerRadius, {
-            isStatic: true,
-            collisionFilter: {
-                mask: 0 // No collision with anything
-            },
-            render: { visible: false }
-        });
-
-        // Create pinwheel blades as composite body
-        const bladeCount = this.params.pinwheelBlades;
-        const bladeWidth = pinwheelRadius * 0.5;
-        const bladeHeight = pinwheelRadius * 0.12;
-        const blades = [];
-
-        for (let i = 0; i < bladeCount; i++) {
-            const angle = (i / bladeCount) * Math.PI * 2;
-            // Position blades from center
-            const bladeX = Math.cos(angle) * pinwheelRadius * 0.65;
-            const bladeY = Math.sin(angle) * pinwheelRadius * 0.65;
-
-            const blade = Matter.Bodies.rectangle(
-                pinwheelX + bladeX,
-                pinwheelY + bladeY,
-                bladeWidth,
-                bladeHeight,
-                {
-                    angle: angle,
-                    render: { visible: false }
-                }
-            );
-
-            blades.push(blade);
-        }
-
-        // Create rotating composite body from blades
-        const pinwheelComposite = Matter.Body.create({
-            parts: blades,
-            friction: 0.3,
-            frictionAir: 0.05, // Air resistance for smooth acceleration/deceleration (damping effect)
-            restitution: 0.5,
-            density: 0.001
-        });
-
-        // Set reasonable inertia (higher = slower acceleration/deceleration)
-        Matter.Body.setInertia(pinwheelComposite, 100);
-
-        // Create revolute joint (rotation around fixed center)
-        const pinwheelConstraint = Matter.Constraint.create({
-            bodyA: centerAnchor,
-            bodyB: pinwheelComposite,
-            pointA: { x: 0, y: 0 },
-            pointB: { x: 0, y: 0 },
-            stiffness: 1,
-            length: 0,
-            render: { visible: false }
-        });
-
-        Matter.World.add(this.world, [centerAnchor, pinwheelComposite, pinwheelConstraint]);
-
-        this.pinwheel = {
-            anchor: centerAnchor,
-            body: pinwheelComposite,
-            constraint: pinwheelConstraint,
-            x: pinwheelX,
-            y: pinwheelY,
-            radius: pinwheelRadius,
-            bladeCount: bladeCount,
-            centerRadius: centerRadius
-        };
     }
     
     createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
@@ -372,7 +337,7 @@ export class OilTimer {
         const stepsPerPlate = Math.max(minSteps, calculatedSteps); // 最低3ステップを確保
         // 実際のステップ幅（小さい画面では幅を調整）
         const actualStepWidth = availableWidth / stepsPerPlate;
-        const topY = 250; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
+        const topY = 40; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
         const margin = 10;
         
         for (let i = 0; i < plateCount; i++) {
@@ -712,175 +677,6 @@ export class OilTimer {
         }
     }
     
-    renderOilParticles() {
-        const ctx = this.oilCtx;
-
-        this.liquidParticles.forEach(liquidParticle => {
-            const spheres = liquidParticle.spheres;
-            if (spheres.length < 2) return;
-
-            // If constraint visibility is ON, only draw constraints and spheres
-            if (this.liquidSystemParams.constraintVisible) {
-                this.renderSpheresAndConstraints(liquidParticle);
-            } else {
-                // Otherwise, draw smooth blob-like shape
-                const outerSpheres = spheres.slice(1);
-                if (outerSpheres.length < 3) return;
-
-                // Sort outer spheres by angle around center for proper curve drawing
-                const center = spheres[0].position;
-                const sortedSpheres = outerSpheres.map(sphere => ({
-                    sphere: sphere,
-                    angle: Math.atan2(sphere.position.y - center.y, sphere.position.x - center.x)
-                })).sort((a, b) => a.angle - b.angle).map(item => item.sphere);
-
-                // Draw smooth blob-like shape with high curvature
-                ctx.fillStyle = this.params.oilColor;
-                ctx.beginPath();
-                this.drawSmoothBlob(ctx, sortedSpheres);
-                ctx.closePath();
-                ctx.fill();
-            }
-        });
-    }
-
-    drawSmoothBlob(ctx, spheres) {
-        if (spheres.length < 3) return;
-
-        const positions = spheres.map(s => s.position);
-
-        // Use high smoothness factor for blob-like appearance
-        const smoothness = 0.4; // Higher = more rounded, blob-like
-
-        // Start from midpoint between first and second sphere
-        const start = this.getMidpoint(positions[positions.length - 1], positions[0]);
-        ctx.moveTo(start.x, start.y);
-
-        // Draw curve through all spheres with smooth control points
-        for (let i = 0; i < positions.length; i++) {
-            const current = positions[i];
-            const next = positions[(i + 1) % positions.length];
-            const prev = positions[(i - 1 + positions.length) % positions.length];
-
-            // Calculate control points that create smooth, rounded curves
-            // Push control points outward from sphere centers for blobbiness
-            const angle1 = Math.atan2(current.y - prev.y, current.x - prev.x);
-            const angle2 = Math.atan2(next.y - current.y, next.x - current.x);
-
-            // Extend control points beyond sphere radius for smoothness
-            const distance = Math.sqrt(
-                Math.pow(next.x - current.x, 2) +
-                Math.pow(next.y - current.y, 2)
-            );
-
-            const cp1x = current.x + Math.cos(angle1) * distance * smoothness;
-            const cp1y = current.y + Math.sin(angle1) * distance * smoothness;
-            const cp2x = current.x + Math.cos(angle2) * distance * smoothness;
-            const cp2y = current.y + Math.sin(angle2) * distance * smoothness;
-
-            const mid = this.getMidpoint(current, next);
-
-            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, mid.x, mid.y);
-        }
-    }
-
-    getMidpoint(p1, p2) {
-        return {
-            x: (p1.x + p2.x) / 2,
-            y: (p1.y + p2.y) / 2
-        };
-    }
-
-    renderSpheresAndConstraints(liquidParticle) {
-        const ctx = this.oilCtx;
-
-        // Draw constraints (springs) first
-        liquidParticle.constraints.forEach(constraint => {
-            const bodyA = constraint.bodyA;
-            const bodyB = constraint.bodyB;
-
-            ctx.strokeStyle = constraint.render.strokeStyle || 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 2;
-
-            ctx.beginPath();
-            ctx.moveTo(bodyA.position.x, bodyA.position.y);
-            ctx.lineTo(bodyB.position.x, bodyB.position.y);
-            ctx.stroke();
-        });
-
-        // Draw spheres (particles) on top
-        liquidParticle.spheres.forEach((sphere, index) => {
-            const radius = index === 0 ?
-                this.liquidSystemParams.sphereRadius :
-                this.liquidSystemParams.sphereRadius * 0.85;
-
-            ctx.fillStyle = this.params.oilColor;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 1;
-
-            ctx.beginPath();
-            ctx.arc(sphere.position.x, sphere.position.y, radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-        });
-    }
-
-    renderPinwheel() {
-        if (!this.pinwheel) return;
-
-        const ctx = this.oilCtx;
-        const pinwheel = this.pinwheel;
-        const angle = pinwheel.body.angle;
-
-        ctx.save();
-        ctx.translate(pinwheel.x, pinwheel.y);
-        ctx.rotate(angle);
-
-        // Draw center circle
-        ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, pinwheel.centerRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Draw blades - smaller and glass-colored
-        const bladeCount = pinwheel.bladeCount;
-        const bladeLength = pinwheel.radius * 0.75; // Reduced
-        const bladeWidth = pinwheel.radius * 0.12; // Reduced
-
-        for (let i = 0; i < bladeCount; i++) {
-            const bladeAngle = (i / bladeCount) * Math.PI * 2;
-
-            ctx.save();
-            ctx.rotate(bladeAngle);
-
-            // Glass-like gradient (matching stairs)
-            const gradient = ctx.createLinearGradient(0, -bladeWidth/2, 0, bladeWidth/2);
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-            gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.25)');
-            gradient.addColorStop(1, 'rgba(255, 255, 255, 0.15)');
-
-            ctx.fillStyle = gradient;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; // Glass edge
-            ctx.lineWidth = 1.5;
-
-            // Draw rounded rectangle blade - positioned to not overlap center
-            const bladeX = pinwheel.radius * 0.65;
-            const bladeY = 0;
-
-            ctx.beginPath();
-            ctx.roundRect(bladeX - bladeLength/2, bladeY - bladeWidth/2, bladeLength, bladeWidth, bladeWidth/2);
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.restore();
-        }
-
-        ctx.restore();
-    }
-
     renderGlassBody(ctx, body, fillStyle, strokeStyle) {
         // Glass appearance
         ctx.fillStyle = fillStyle;
@@ -1077,13 +873,10 @@ export class OilTimer {
         
         // Clear oil canvas background
         this.oilCtx.clearRect(0, 0, this.oilCanvas.width, this.oilCanvas.height);
-
-        // Render pinwheel first (behind oil particles)
-        this.renderPinwheel();
-
-        // Custom render oil particles with smooth curves
-        this.renderOilParticles();
-
+        
+        // Render particles and constraints
+        Matter.Render.world(this.render);
+        
         this.updateFPS();
         
         requestAnimationFrame(() => this.animate());
