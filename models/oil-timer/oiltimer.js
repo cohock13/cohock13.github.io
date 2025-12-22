@@ -284,8 +284,6 @@ export class OilTimer {
         this.renderBackground();
         this.renderStairs();
         this.renderWalls();
-        
-        console.log(`Created ${this.liquidParticles.length} liquid particles and ${this.staticBodies.length} static bodies`);
     }
     
     separateStructuresForRendering() {
@@ -297,9 +295,9 @@ export class OilTimer {
         const width = this.canvas.width;
         const height = this.canvas.height;
         const thickness = 20;
-        
-        // Container dimensions - fixed width
-        const containerWidth = this.params.containerWidth;  // Use fixed container width
+
+        // Container dimensions - responsive below 900px, fixed above
+        const containerWidth = width < 900 ? width * 0.92 : this.params.containerWidth;
         const containerX = (width - containerWidth) / 2;
         
         // Container boundaries (invisible) - only left and right walls
@@ -331,12 +329,16 @@ export class OilTimer {
     
     createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
         const plateCount = 10;
-        const fixedStepWidth = 80; // 固定のstep幅
+        const baseStepWidth = 80; // 基本のstep幅
         const stepHeight = 70; // 各ステップの縦の進み幅（≒最小マージン）
         const availableWidth = containerWidth * 0.9; // 利用可能幅
-        const stepsPerPlate = Math.floor(availableWidth / fixedStepWidth); // 固定幅で埋められるstep数
+        const minSteps = 3; // 最小ステップ数（これ以下だと油が流れない）
+        const calculatedSteps = Math.floor(availableWidth / baseStepWidth);
+        const stepsPerPlate = Math.max(minSteps, calculatedSteps); // 最低3ステップを確保
+        // 実際のステップ幅（小さい画面では幅を調整）
+        const actualStepWidth = availableWidth / stepsPerPlate;
         const topY = 40; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
-        const margin = 0;
+        const margin = 10;
         
         for (let i = 0; i < plateCount; i++) {
             let baseY;
@@ -357,18 +359,18 @@ export class OilTimer {
                 const baseAngle = 0.05;
                 const angleMultiplier = j === 0 ? 7.5 : 2;  // steeper for first step
                 const stepAngle = (isLeftOriented ? baseAngle : -baseAngle) * angleMultiplier;
-                
-                // Calculate step position with fixed width (packed from container edge)
+
+                // Calculate step position with responsive width
                 const stepX = isLeftOriented
-                    ? containerX + fixedStepWidth * (j + 0.5)  // Pack from left
-                    : containerX + containerWidth - fixedStepWidth * (j + 0.5); // Pack from right
+                    ? containerX + actualStepWidth * (j + 0.5)  // Pack from left
+                    : containerX + containerWidth - actualStepWidth * (j + 0.5); // Pack from right
 
                 const stepY = baseY + j * (stepHeight / 2);
-                
-                // Only first two steps (j=0 and j=1) have wider overlap to fill gap, others use fixed size
-                const stepWidthIndividual = (j === 0 || j === 1) 
-                    ? fixedStepWidth * 1.1  // 10% overlap for first two steps
-                    : fixedStepWidth;       // Fixed size for other steps
+
+                // Only first two steps (j=0 and j=1) have wider overlap to fill gap, others use actual size
+                const stepWidthIndividual = (j === 0 || j === 1)
+                    ? actualStepWidth * 1.1  // 10% overlap for first two steps
+                    : actualStepWidth;       // Actual size for other steps
                 
                 const stepSurface = Matter.Bodies.rectangle(
                     stepX,
@@ -782,13 +784,25 @@ export class OilTimer {
     }
     
     spawnOilParticle() {
-        const isMobile = this.canvas.width < 768;
-        const containerWidth = isMobile ? this.canvas.width * 0.9 : this.canvas.width * 0.45;
-        const containerX = (this.canvas.width - containerWidth) / 2;
-        
-        // Spawn position at left upper area near the stairs
-        const spawnX = containerX + 100; // Left side with some randomness
-        const spawnY = 0; // Top area with some randomness
+        const width = this.canvas.width;
+        const containerWidth = width < 900 ? width * 0.92 : this.params.containerWidth;
+        const containerX = (width - containerWidth) / 2;
+
+        // Calculate first step position (matches createLiquidTestStairs logic)
+        const baseStepWidth = 80;
+        const availableWidth = containerWidth * 0.9;
+        const minSteps = 3;
+        const calculatedSteps = Math.floor(availableWidth / baseStepWidth);
+        const stepsPerPlate = Math.max(minSteps, calculatedSteps);
+        const actualStepWidth = availableWidth / stepsPerPlate;
+        const topY = 40;
+
+        // First plate (i=0) is left-oriented, first step (j=0)
+        const firstStepX = containerX + actualStepWidth * 0.5;
+
+        // Spawn position directly above the first left step
+        const spawnX = firstStepX;
+        const spawnY = topY - 30; // Slightly above the first step
         
         const liquidParticle = this.createLiquidParticle(spawnX, spawnY, this.nextParticleIndex);
         this.liquidParticles.push(liquidParticle);
@@ -797,8 +811,6 @@ export class OilTimer {
         // Add to physics world
         Matter.World.add(this.world, liquidParticle.spheres);
         Matter.World.add(this.world, liquidParticle.constraints);
-        
-        console.log(`Spawned oil particle #${liquidParticle.index} at (${spawnX.toFixed(1)}, ${spawnY.toFixed(1)})`);
     }
     
     updateOilSpawning() {
