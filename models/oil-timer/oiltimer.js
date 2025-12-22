@@ -367,13 +367,25 @@ export class OilTimer {
 
                 const stepY = baseY + j * (stepHeight / 2);
 
-                // Only first two steps (j=0 and j=1) have wider overlap to fill gap, others use actual size
-                const stepWidthIndividual = (j === 0 || j === 1)
-                    ? actualStepWidth * 1.1  // 10% overlap for first two steps
-                    : actualStepWidth;       // Actual size for other steps
-                
+                // Wall-adjacent step (j=0) is longer to prevent oil from slipping through gaps
+                // It extends to the wall but doesn't go outside
+                let stepWidthIndividual;
+                let adjustedStepX = stepX;
+
+                if (j === 0) {
+                    // First step - extends to wall edge (but not outside)
+                    stepWidthIndividual = actualStepWidth * 1.3;
+                    // Shift position toward wall to make it reach the wall
+                    adjustedStepX = isLeftOriented
+                        ? stepX - actualStepWidth * 0.15
+                        : stepX + actualStepWidth * 0.15;
+                } else {
+                    // All other steps - normal size
+                    stepWidthIndividual = actualStepWidth;
+                }
+
                 const stepSurface = Matter.Bodies.rectangle(
-                    stepX,
+                    adjustedStepX,
                     stepY,
                     stepWidthIndividual,
                     thickness * 0.6,
@@ -471,7 +483,7 @@ export class OilTimer {
                 damping: this.liquidSystemParams.damping,
                 render: {
                     visible: this.liquidSystemParams.constraintVisible,
-                    strokeStyle: 'rgba(255, 255, 255, 0.3)',
+                    strokeStyle: '#ffffff',
                     lineWidth: 1
                 }
             });
@@ -490,11 +502,11 @@ export class OilTimer {
                 damping: this.liquidSystemParams.damping * 0.8,
                 render: {
                     visible: this.liquidSystemParams.constraintVisible,
-                    strokeStyle: 'rgba(255, 255, 255, 0.2)',
+                    strokeStyle: '#ffffff',
                     lineWidth: 1
                 }
             });
-            
+
             constraints.push(outerConstraint);
         }
         
@@ -510,11 +522,11 @@ export class OilTimer {
                     damping: this.liquidSystemParams.damping * 1.2,
                     render: {
                         visible: this.liquidSystemParams.constraintVisible,
-                        strokeStyle: 'rgba(255, 255, 255, 0.1)',
+                        strokeStyle: '#ffffff',
                         lineWidth: 1
                     }
                 });
-                
+
                 constraints.push(crossConstraint);
             }
         }
@@ -668,11 +680,14 @@ export class OilTimer {
     renderWalls() {
         // Clear walls canvas
         this.wallsCtx.clearRect(0, 0, this.wallsCanvas.width, this.wallsCanvas.height);
-        
-        // Render wall bodies
+
+        // Render wall bodies - use opaque background to hide step edges
         if (this.wallBodies) {
             this.wallBodies.forEach(body => {
-                this.renderGlassBody(this.wallsCtx, body, 'rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.6)');
+                // First draw black background to hide steps
+                this.renderGlassBody(this.wallsCtx, body, '#000000', 'rgba(255, 255, 255, 0.6)');
+                // Then draw semi-transparent glass on top
+                this.renderGlassBody(this.wallsCtx, body, 'rgba(255, 255, 255, 0.1)', 'transparent');
             });
         }
     }
@@ -859,26 +874,60 @@ export class OilTimer {
         }
     }
     
+    renderOilParticles() {
+        const ctx = this.oilCtx;
+
+        this.liquidParticles.forEach(liquidParticle => {
+            // Render constraints (springs) as simple white lines
+            if (this.liquidSystemParams.constraintVisible) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+
+                liquidParticle.constraints.forEach(constraint => {
+                    const posA = constraint.bodyA.position;
+                    const posB = constraint.bodyB.position;
+
+                    ctx.beginPath();
+                    ctx.moveTo(posA.x, posA.y);
+                    ctx.lineTo(posB.x, posB.y);
+                    ctx.stroke();
+                });
+            }
+
+            // Render spheres (particles)
+            liquidParticle.spheres.forEach((sphere, index) => {
+                const radius = index === 0
+                    ? this.liquidSystemParams.sphereRadius
+                    : this.liquidSystemParams.sphereRadius * 0.85;
+
+                ctx.fillStyle = this.params.oilColor;
+                ctx.beginPath();
+                ctx.arc(sphere.position.x, sphere.position.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        });
+    }
+
     animate() {
         this.updatePhysics();
-        
+
         // Update Matter.js engine
         Matter.Engine.update(this.engine, 1000 / 60);
-        
+
         // Spawn new oil particles at intervals
         this.updateOilSpawning();
-        
+
         // Remove oil particles that have fallen below the screen
         this.removeOffScreenParticles();
-        
+
         // Clear oil canvas background
         this.oilCtx.clearRect(0, 0, this.oilCanvas.width, this.oilCanvas.height);
-        
-        // Render particles and constraints
-        Matter.Render.world(this.render);
-        
+
+        // Custom render oil particles with simple lines for constraints
+        this.renderOilParticles();
+
         this.updateFPS();
-        
+
         requestAnimationFrame(() => this.animate());
     }
 }
