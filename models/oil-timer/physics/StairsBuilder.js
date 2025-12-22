@@ -3,7 +3,7 @@
  */
 export class StairsBuilder {
     /**
-     * 液体テスト用の階段を作成
+     * 液体テスト用の階段を作成（レーンA + 中央ミラーリングしたレーンB）
      */
     static createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height, config) {
         const params = config.stairsParams;
@@ -17,6 +17,9 @@ export class StairsBuilder {
         const actualStepWidth = availableWidth / stepsPerPlate;
         const topY = params.topY;
         const margin = params.margin;
+
+        // 中央軸の計算（ミラーリングの基準）
+        const centerX = containerX + containerWidth / 2;
 
         for (let i = 0; i < plateCount; i++) {
             let baseY;
@@ -36,49 +39,79 @@ export class StairsBuilder {
                 // 最初のステップ（j=0）はオイルが詰まるのを防ぐために急な角度にする
                 const baseAngle = params.baseAngle;
                 const angleMultiplier = j === 0 ? params.firstStepAngleMultiplier : params.normalStepAngleMultiplier;
-                const stepAngle = (isLeftOriented ? baseAngle : -baseAngle) * angleMultiplier;
+                const stepAngle_A = (isLeftOriented ? baseAngle : -baseAngle) * angleMultiplier;
 
-                // レスポンシブな幅でステップの位置を計算
-                const stepX = isLeftOriented
+                // レーンAのステップ位置を計算
+                const stepX_A = isLeftOriented
                     ? containerX + actualStepWidth * (j + 0.5)  // 左から詰める
                     : containerX + containerWidth - actualStepWidth * (j + 0.5); // 右から詰める
 
                 const stepY = baseY + j * (stepHeight / 2);
 
                 // 壁に隣接するステップ（j=0）は、隙間からオイルが滑り落ちるのを防ぐために長くする
-                // 壁の端まで伸びるが、外には出ない
                 let stepWidthIndividual;
-                let adjustedStepX = stepX;
+                let adjustedStepX_A = stepX_A;
 
                 if (j === 0) {
                     // 最初のステップ - 壁の端まで伸ばす（ただし外には出ない）
                     stepWidthIndividual = actualStepWidth * params.firstStepWidthMultiplier;
                     // 壁に到達するように位置をシフト
-                    adjustedStepX = isLeftOriented
-                        ? stepX - actualStepWidth * params.firstStepPositionOffset
-                        : stepX + actualStepWidth * params.firstStepPositionOffset;
+                    adjustedStepX_A = isLeftOriented
+                        ? stepX_A - actualStepWidth * params.firstStepPositionOffset
+                        : stepX_A + actualStepWidth * params.firstStepPositionOffset;
                 } else {
                     // その他のステップ - 通常サイズ
                     stepWidthIndividual = actualStepWidth;
                 }
 
-                const stepSurface = Matter.Bodies.rectangle(
-                    adjustedStepX,
+                // レーンAのステップを生成（レーンAの油滴とのみ衝突）
+                const stepSurface_A = Matter.Bodies.rectangle(
+                    adjustedStepX_A,
                     stepY,
                     stepWidthIndividual,
                     thickness * params.stepThicknessRatio,
                     {
                         isStatic: true,
-                        angle: stepAngle,
+                        angle: stepAngle_A,
                         friction: config.worldParams.wallFriction,
                         frictionStatic: config.worldParams.wallFrictionStatic,
                         restitution: config.worldParams.wallRestitution,
                         chamfer: { radius: params.chamferRadius },
-                        render: { visible: false }
+                        collisionFilter: {
+                            category: 0x0001,  // レーンAのステップカテゴリ
+                            mask: 0x0001       // レーンAの油滴とのみ衝突
+                        },
+                        render: { visible: false },
+                        lane: 'A'
                     }
                 );
+                glassWalls.push(stepSurface_A);
 
-                glassWalls.push(stepSurface);
+                // レーンBのステップを中央軸でミラーリングして生成（レーンBの油滴とのみ衝突）
+                const adjustedStepX_B = 2 * centerX - adjustedStepX_A;
+                const stepAngle_B = -stepAngle_A;  // 角度を反転
+
+                const stepSurface_B = Matter.Bodies.rectangle(
+                    adjustedStepX_B,
+                    stepY,
+                    stepWidthIndividual,
+                    thickness * params.stepThicknessRatio,
+                    {
+                        isStatic: true,
+                        angle: stepAngle_B,
+                        friction: config.worldParams.wallFriction,
+                        frictionStatic: config.worldParams.wallFrictionStatic,
+                        restitution: config.worldParams.wallRestitution,
+                        chamfer: { radius: params.chamferRadius },
+                        collisionFilter: {
+                            category: 0x0002,  // レーンBのステップカテゴリ
+                            mask: 0x0002       // レーンBの油滴とのみ衝突
+                        },
+                        render: { visible: false },
+                        lane: 'B'
+                    }
+                );
+                glassWalls.push(stepSurface_B);
             }
         }
     }

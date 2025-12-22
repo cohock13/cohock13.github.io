@@ -4,24 +4,29 @@ import { GeometryUtils } from '../utils/GeometryUtils.js';
  * オイルパーティクルの描画を担当するクラス
  */
 export class OilRenderer {
-    constructor(oilCtx, canvasManager, config) {
+    constructor(oilCtx, canvasManager, config, lane = 'A') {
         this.ctx = oilCtx;
         this.canvasManager = canvasManager;
         this.config = config;
+        this.lane = lane;
     }
 
     render(liquidParticles, stairBodies) {
         const productionMode = !this.config.liquidSystemParams.constraintVisible;
 
         liquidParticles.forEach(liquidParticle => {
-            if (!productionMode) {
-                // デバッグモード: 制約（ばね）をシンプルな白線として描画
-                this.renderConstraints(liquidParticle);
-                // デバッグモードで球体（パーティクル）をレンダリング
-                this.renderSpheres(liquidParticle);
-            } else {
-                // 本番モード: スムーズなブロブを描画
-                this.renderSmoothBlob(liquidParticle);
+            // 指定されたレーンのパーティクルのみ描画
+            const firstSphere = liquidParticle.spheres[0];
+            if (firstSphere && firstSphere.lane === this.lane) {
+                if (!productionMode) {
+                    // デバッグモード: 制約（ばね）をシンプルな白線として描画
+                    this.renderConstraints(liquidParticle);
+                    // デバッグモードで球体（パーティクル）をレンダリング
+                    this.renderSpheres(liquidParticle);
+                } else {
+                    // 本番モード: スムーズなブロブを描画
+                    this.renderSmoothBlob(liquidParticle);
+                }
             }
         });
 
@@ -53,7 +58,9 @@ export class OilRenderer {
                 ? this.config.liquidSystemParams.sphereRadius
                 : this.config.liquidSystemParams.sphereRadius * this.config.liquidSystemParams.outerSphereRadiusRatio;
 
-            this.ctx.fillStyle = this.config.params.oilColor;
+            // レーンに応じて色を変更
+            const oilColor = sphere.lane === 'B' ? this.config.params.oilColorB : this.config.params.oilColor;
+            this.ctx.fillStyle = oilColor;
             this.ctx.beginPath();
             this.ctx.arc(sphere.position.x, sphere.position.y, radius, 0, Math.PI * 2);
             this.ctx.fill();
@@ -72,16 +79,19 @@ export class OilRenderer {
         this.ctx.globalCompositeOperation = 'destination-out';
 
         for (const body of stairBodies) {
-            const verts = body.vertices;
-            if (!verts || verts.length < 3) continue;
+            // 指定されたレーンのステップのみマスクする
+            if (body.lane === this.lane) {
+                const verts = body.vertices;
+                if (!verts || verts.length < 3) continue;
 
-            this.ctx.beginPath();
-            this.ctx.moveTo(verts[0].x, verts[0].y);
-            for (let i = 1; i < verts.length; i++) {
-                this.ctx.lineTo(verts[i].x, verts[i].y);
+                this.ctx.beginPath();
+                this.ctx.moveTo(verts[0].x, verts[0].y);
+                for (let i = 1; i < verts.length; i++) {
+                    this.ctx.lineTo(verts[i].x, verts[i].y);
+                }
+                this.ctx.closePath();
+                this.ctx.fill();
             }
-            this.ctx.closePath();
-            this.ctx.fill();
         }
 
         this.ctx.restore();
@@ -107,9 +117,15 @@ export class OilRenderer {
         // 外周を角度順に並べ替え
         const sorted = this.sortOuterSpheresByAngle(outerSpheres, center);
 
+        // レーンに応じて色を変更
+        const firstSphere = liquidParticle.spheres[0];
+        const oilColor = firstSphere && firstSphere.lane === 'B'
+            ? this.config.params.oilColorB
+            : this.config.params.oilColor;
+
         // 直線で質点をつなぎ、塗りつぶす
-        this.ctx.fillStyle = this.config.params.oilColor;
-        this.ctx.strokeStyle = this.config.params.oilColor;
+        this.ctx.fillStyle = oilColor;
+        this.ctx.strokeStyle = oilColor;
         this.ctx.beginPath();
         this.ctx.moveTo(sorted[0].x, sorted[0].y);
         for (let i = 1; i < sorted.length; i++) {

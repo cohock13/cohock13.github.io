@@ -2,30 +2,28 @@
  * 壁の描画を担当するクラス
  */
 export class WallsRenderer {
-    constructor(wallsCtx, canvasManager) {
+    constructor(wallsCtx, canvasManager, config) {
         this.ctx = wallsCtx;
         this.canvasManager = canvasManager;
+        this.config = config;
     }
 
     render(wallBodies) {
         // 壁キャンバスをクリア
         this.ctx.clearRect(0, 0, this.canvasManager.getWidth(), this.canvasManager.getHeight());
 
-        // 壁ボディをレンダリング - 階段の端を隠すために不透明な背景を使用
+        // 壁ボディをレンダリング - 背景色で塗りつぶし
         if (wallBodies) {
             wallBodies.forEach(body => {
-                // まず階段を隠すために黒い背景を描画
-                this.renderGlassBody(body, '#000000', 'rgba(255, 255, 255, 0.6)');
-                // 次に半透明のガラスを上に描画
-                this.renderGlassBody(body, 'rgba(255, 255, 255, 0.1)', 'transparent');
+                this.renderWallBody(body);
             });
         }
     }
 
-    renderGlassBody(body, fillStyle, strokeStyle) {
-        // ガラスの外観
-        this.ctx.fillStyle = fillStyle;
-        this.ctx.strokeStyle = strokeStyle;
+    renderWallBody(body) {
+        // 背景色で塗りつぶし + 白い枠線
+        this.ctx.fillStyle = this.config.params.backgroundColor;
+        this.ctx.strokeStyle = '#ababab';
         this.ctx.lineWidth = 2;
 
         // ボディタイプに基づいてレンダリング
@@ -46,11 +44,6 @@ export class WallsRenderer {
                 }
                 this.ctx.closePath();
                 this.ctx.fill();
-                this.ctx.stroke();
-
-                // ガラスのハイライトを追加
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                this.ctx.lineWidth = 1;
                 this.ctx.stroke();
             }
         }

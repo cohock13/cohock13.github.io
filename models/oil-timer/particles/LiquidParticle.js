@@ -8,8 +8,9 @@ export class LiquidParticle {
 
     /**
      * 液体パーティクルを作成（二重楕円構造）
+     * @param {string} lane - 'A' or 'B' レーン識別子
      */
-    create(centerX, centerY, index) {
+    create(centerX, centerY, index, lane = 'A') {
         const spheres = [];
         const constraints = [];
         const numSpheres = this.config.liquidSystemParams.spheresPerParticle;
@@ -26,6 +27,15 @@ export class LiquidParticle {
         const rxInner = rxOuter * this.config.liquidSystemParams.innerEllipseRatio;
         const ryInner = ryOuter * this.config.liquidSystemParams.innerEllipseRatio;
 
+        // レーンに応じた衝突設定
+        // レーンA: category=0x0001, mask=0x0001|0x0003（レーンAのステップと壁と衝突）
+        // レーンB: category=0x0002, mask=0x0002|0x0003（レーンBのステップと壁と衝突）
+        // 同じレーン内の油滴同士は衝突しないようにgroupを-1に設定
+        const collisionCategory = lane === 'A' ? 0x0001 : 0x0002;
+        const collisionMask = lane === 'A' ? 0x0001 | 0x0003 : 0x0002 | 0x0003;
+        const collisionGroup = -1;  // 同じレーン内の油滴同士は衝突しない
+        const oilColor = lane === 'A' ? this.config.params.oilColor : this.config.params.oilColorB;
+
         // --- 距離計算ヘルパー ---
         const dist = (a, b) => Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y);
 
@@ -39,9 +49,14 @@ export class LiquidParticle {
                 friction: this.config.liquidSystemParams.friction,
                 frictionAir: this.config.liquidSystemParams.frictionAir,
                 density: this.config.liquidSystemParams.density * this.config.liquidSystemParams.outerEllipse.mass,
-                collisionFilter: { group: -1 },
-                render: { fillStyle: this.config.params.oilColor, strokeStyle: 'transparent', lineWidth: 0 },
+                collisionFilter: {
+                    group: collisionGroup,
+                    category: collisionCategory,
+                    mask: collisionMask
+                },
+                render: { fillStyle: oilColor, strokeStyle: 'transparent', lineWidth: 0 },
                 liquidIndex: index,
+                lane: lane,
                 sphereType: 'outer',
                 outerIndex: i
             });
@@ -59,9 +74,14 @@ export class LiquidParticle {
                 friction: this.config.liquidSystemParams.friction,
                 frictionAir: this.config.liquidSystemParams.frictionAir,
                 density: this.config.liquidSystemParams.density * this.config.liquidSystemParams.innerEllipse.mass,
-                collisionFilter: { group: -1 },
-                render: { fillStyle: this.config.params.oilColor, strokeStyle: 'transparent', lineWidth: 0 },
+                collisionFilter: {
+                    group: collisionGroup,
+                    category: collisionCategory,
+                    mask: collisionMask
+                },
+                render: { fillStyle: oilColor, strokeStyle: 'transparent', lineWidth: 0 },
                 liquidIndex: index,
+                lane: lane,
                 sphereType: 'inner',
                 innerIndex: i
             });

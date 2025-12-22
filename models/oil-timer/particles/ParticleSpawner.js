@@ -12,7 +12,7 @@ export class ParticleSpawner {
     }
 
     /**
-     * オイルパーティクルをスポーン
+     * オイルパーティクルをスポーン（レーンA/B用に左右2つ同時生成）
      */
     spawnOilParticle(world) {
         const width = this.canvasManager.getWidth();
@@ -29,20 +29,30 @@ export class ParticleSpawner {
         const actualStepWidth = availableWidth / stepsPerPlate;
         const topY = params.topY;
 
-        // 最初のプレート（i=0）は左向き、最初のステップ（j=0）
-        const firstStepX = containerX + actualStepWidth * 0.5;
+        // 中央軸の計算
+        const centerX = containerX + containerWidth / 2;
 
-        // 最初の左ステップの真上にスポーン
-        const spawnX = firstStepX;
+        // レーンA（最初のプレート i=0 は左向き）の最初のステップ位置
+        const firstStepX_A = containerX + actualStepWidth * 0.5;
+        const spawnX_A = firstStepX_A;
         const spawnY = topY + this.config.params.spawnYOffset;
 
-        const particle = this.liquidParticle.create(spawnX, spawnY, this.nextParticleIndex);
-        this.liquidParticles.push(particle);
-        this.nextParticleIndex++;
+        // レーンBのスポーン位置を中央軸でミラーリング
+        const spawnX_B = 2 * centerX - spawnX_A;
 
-        // 物理世界に追加
-        Matter.World.add(world, particle.spheres);
-        Matter.World.add(world, particle.constraints);
+        // レーンAのパーティクル生成
+        const particle_A = this.liquidParticle.create(spawnX_A, spawnY, this.nextParticleIndex, 'A');
+        this.liquidParticles.push(particle_A);
+        this.nextParticleIndex++;
+        Matter.World.add(world, particle_A.spheres);
+        Matter.World.add(world, particle_A.constraints);
+
+        // レーンBのパーティクル生成
+        const particle_B = this.liquidParticle.create(spawnX_B, spawnY, this.nextParticleIndex, 'B');
+        this.liquidParticles.push(particle_B);
+        this.nextParticleIndex++;
+        Matter.World.add(world, particle_B.spheres);
+        Matter.World.add(world, particle_B.constraints);
     }
 
     /**

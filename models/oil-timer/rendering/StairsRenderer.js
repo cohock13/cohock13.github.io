@@ -2,26 +2,34 @@
  * 階段の描画を担当するクラス
  */
 export class StairsRenderer {
-    constructor(stairsCtx, canvasManager) {
+    constructor(stairsCtx, canvasManager, config, lane = 'A') {
         this.ctx = stairsCtx;
         this.canvasManager = canvasManager;
+        this.config = config;
+        this.lane = lane;
     }
 
     render(stairBodies) {
         // 階段キャンバスをクリア
         this.ctx.clearRect(0, 0, this.canvasManager.getWidth(), this.canvasManager.getHeight());
 
-        // 階段ボディをレンダリング
+        // 階段ボディをレンダリング（指定レーンのみ）
         if (stairBodies) {
             stairBodies.forEach(body => {
-                this.renderGlassBody(body, 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.4)');
+                // 指定されたレーンのステップのみ描画
+                if (body.lane === this.lane) {
+                    const strokeColor = this.lane === 'B'
+                        ? this.config.params.stepColorB
+                        : this.config.params.stepColorA;
+                    this.renderStepOutline(body, strokeColor);
+                }
             });
         }
     }
 
-    renderGlassBody(body, fillStyle, strokeStyle) {
-        // ガラスの外観
-        this.ctx.fillStyle = fillStyle;
+    renderStepOutline(body, strokeStyle) {
+        // 背景色で塗りつぶし + 枠線を描画
+        this.ctx.fillStyle = this.config.params.backgroundColor;
         this.ctx.strokeStyle = strokeStyle;
         this.ctx.lineWidth = 2;
 
@@ -43,11 +51,6 @@ export class StairsRenderer {
                 }
                 this.ctx.closePath();
                 this.ctx.fill();
-                this.ctx.stroke();
-
-                // ガラスのハイライトを追加
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                this.ctx.lineWidth = 1;
                 this.ctx.stroke();
             }
         }

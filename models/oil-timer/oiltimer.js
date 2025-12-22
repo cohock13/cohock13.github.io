@@ -35,10 +35,12 @@ export class OilTimer {
         this.render = this.physicsEngine.render;
 
         // レンダラーの初期化
-        this.backgroundRenderer = new BackgroundRenderer(this.canvasManager.backgroundCtx, this.canvasManager);
-        this.stairsRenderer = new StairsRenderer(this.canvasManager.stairsCtx, this.canvasManager);
-        this.wallsRenderer = new WallsRenderer(this.canvasManager.wallsCtx, this.canvasManager);
-        this.oilRenderer = new OilRenderer(this.canvasManager.oilCtx, this.canvasManager, this.config);
+        this.backgroundRenderer = new BackgroundRenderer(this.canvasManager.backgroundCtx, this.canvasManager, this.config);
+        this.wallsRenderer = new WallsRenderer(this.canvasManager.wallsCtx, this.canvasManager, this.config);
+        this.stairsRendererA = new StairsRenderer(this.canvasManager.stairsCtxA, this.canvasManager, this.config, 'A');
+        this.oilRendererA = new OilRenderer(this.canvasManager.oilCtxA, this.canvasManager, this.config, 'A');
+        this.stairsRendererB = new StairsRenderer(this.canvasManager.stairsCtxB, this.canvasManager, this.config, 'B');
+        this.oilRendererB = new OilRenderer(this.canvasManager.oilCtxB, this.canvasManager, this.config, 'B');
 
         // ワールドビルダーの初期化
         this.worldBuilder = new WorldBuilder(this.canvasManager, this.config);
@@ -52,6 +54,16 @@ export class OilTimer {
 
         // パフォーマンスモニターの初期化
         this.performanceMonitor = new PerformanceMonitor();
+
+        // Stats.js FPSモニターの初期化
+        if (typeof Stats !== 'undefined') {
+            this.stats = new Stats();
+            this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb
+            this.stats.dom.style.position = 'absolute';
+            this.stats.dom.style.left = '0px';
+            this.stats.dom.style.top = '0px';
+            document.body.appendChild(this.stats.dom);
+        }
 
         try {
             this.init();
@@ -90,15 +102,26 @@ export class OilTimer {
         // 基本コントロール
         gui.add(this.config.params, 'simulationSpeed', 0.5, 3.0, 0.1).name('シミュレーション速度');
         gui.add(this.config.params, 'spawnInterval', 500, 3000, 100).name('オイル出現間隔 (ms)');
-        gui.addColor(this.config.params, 'oilColor').name('色').onChange(() => {
+
+        // 色設定
+        gui.addColor(this.config.params, 'backgroundColor').name('背景色').onChange(() => {
+            this.backgroundRenderer.render();
+            this.wallsRenderer.render(this.worldBuilder.getWallBodies());
+            this.stairsRendererA.render(this.worldBuilder.getStairBodies());
+            this.stairsRendererB.render(this.worldBuilder.getStairBodies());
+        });
+        gui.addColor(this.config.params, 'oilColor').name('色1').onChange(() => {
             this.physicsUpdater.updateLiquidProperties(this.particleSpawner.getLiquidParticles());
         });
-
-        // 描画設定
-        const renderFolder = gui.addFolder('描画設定');
-        renderFolder.add(this.config.renderConstants, 'bezierTension', 0.0, 1.0, 0.05).name('スムージング (テンション)');
-        renderFolder.add(this.config.renderConstants, 'blurRadius', 0, 10, 0.5).name('ぼかし半径 (px)');
-        renderFolder.add(this.config.renderConstants, 'blurAlpha', 0.0, 1.0, 0.05).name('ぼかし透明度');
+        gui.addColor(this.config.params, 'oilColorB').name('色2').onChange(() => {
+            this.physicsUpdater.updateLiquidProperties(this.particleSpawner.getLiquidParticles());
+        });
+        // gui.addColor(this.config.params, 'stepColorA').name('レーンA ステップ色').onChange(() => {
+        //     this.stairsRendererA.render(this.worldBuilder.getStairBodies());
+        // });
+        // gui.addColor(this.config.params, 'stepColorB').name('レーンB ステップ色').onChange(() => {
+        //     this.stairsRendererB.render(this.worldBuilder.getStairBodies());
+        // });
 
         gui.add(this.config.liquidSystemParams, 'constraintVisible').name('ばね表示').onChange(() => {
             this.liquidParticle.updateConstraintVisibility(this.particleSpawner.getLiquidParticles());
@@ -119,8 +142,9 @@ export class OilTimer {
 
         // 別々のキャンバスに構造をレンダリング
         this.backgroundRenderer.render();
-        this.stairsRenderer.render(this.worldBuilder.getStairBodies());
         this.wallsRenderer.render(this.worldBuilder.getWallBodies());
+        this.stairsRendererA.render(this.worldBuilder.getStairBodies());
+        this.stairsRendererB.render(this.worldBuilder.getStairBodies());
     }
 
     reset() {
@@ -142,11 +166,14 @@ export class OilTimer {
         });
 
         // 構造表示を更新
-        this.stairsRenderer.render(this.worldBuilder.getStairBodies());
         this.wallsRenderer.render(this.worldBuilder.getWallBodies());
+        this.stairsRendererA.render(this.worldBuilder.getStairBodies());
+        this.stairsRendererB.render(this.worldBuilder.getStairBodies());
     }
 
     animate() {
+        if (this.stats) this.stats.begin();
+
         this.physicsUpdater.update(this.particleSpawner.getLiquidParticles());
 
         // シミュレーション速度に応じて物理演算を複数回実行
@@ -180,21 +207,37 @@ export class OilTimer {
         // 画面下に落ちたオイルパーティクルを削除
         this.particleSpawner.removeOffScreenParticles(this.world);
 
-        // オイルキャンバスの背景をクリア
-        this.canvasManager.oilCtx.clearRect(
+        // レーンAのオイルキャンバスの背景をクリア
+        this.canvasManager.oilCtxA.clearRect(
             0,
             0,
             this.canvasManager.getWidth(),
             this.canvasManager.getHeight()
         );
 
-        // オイルパーティクルのカスタムレンダリング（本番モードでステップマスクを含む）
-        this.oilRenderer.render(
+        // レーンBのオイルキャンバスの背景をクリア
+        this.canvasManager.oilCtxB.clearRect(
+            0,
+            0,
+            this.canvasManager.getWidth(),
+            this.canvasManager.getHeight()
+        );
+
+        // レーンAのオイルパーティクルをレンダリング
+        this.oilRendererA.render(
+            this.particleSpawner.getLiquidParticles(),
+            this.worldBuilder.getStairBodies()
+        );
+
+        // レーンBのオイルパーティクルをレンダリング
+        this.oilRendererB.render(
             this.particleSpawner.getLiquidParticles(),
             this.worldBuilder.getStairBodies()
         );
 
         this.performanceMonitor.update(this.particleSpawner.getLiquidParticles());
+
+        if (this.stats) this.stats.end();
 
         requestAnimationFrame(() => this.animate());
     }

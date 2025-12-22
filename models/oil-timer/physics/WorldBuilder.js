@@ -23,12 +23,16 @@ export class WorldBuilder {
             : this.config.params.containerWidth;
         const containerX = (width - containerWidth) / 2;
 
-        // コンテナ境界（不可視） - 左右の壁のみ
+        // コンテナ境界（不可視） - 左右の壁のみ（両レーンと衝突）
         const wallOptions = {
             isStatic: true,
             friction: this.config.worldParams.wallFriction,
             frictionStatic: this.config.worldParams.wallFrictionStatic,
             restitution: this.config.worldParams.wallRestitution,
+            collisionFilter: {
+                category: 0x0003,  // 壁カテゴリ
+                mask: 0x0003       // 両レーン（0x0001 | 0x0002）と衝突
+            },
             render: { visible: false }
         };
 
@@ -40,12 +44,14 @@ export class WorldBuilder {
 
         const glassWalls = [];
 
-        // メインコンテナの壁 - 左右の壁のみ
+        // メインコンテナの壁 - 左右の壁のみ（両レーンと衝突）
+        // 外側を厚くするために、壁の幅を1.5倍にする
+        const outerWallThickness = thickness * 1.5;
         glassWalls.push(
-            // 左壁
-            Matter.Bodies.rectangle(containerX - thickness / 2, height / 2, thickness, height, wallOptions),
-            // 右壁
-            Matter.Bodies.rectangle(containerX + containerWidth + thickness / 2, height / 2, thickness, height, wallOptions)
+            // 左壁（外側に厚く）
+            Matter.Bodies.rectangle(containerX - outerWallThickness / 2, height / 2, outerWallThickness, height, wallOptions),
+            // 右壁（外側に厚く）
+            Matter.Bodies.rectangle(containerX + containerWidth + outerWallThickness / 2, height / 2, outerWallThickness, height, wallOptions)
         );
 
         // 液体テスト用の階段を作成 - オリジナルのオイルタイマーに似せる
