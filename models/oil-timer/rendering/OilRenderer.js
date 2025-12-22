@@ -88,30 +88,36 @@ export class OilRenderer {
     }
 
     /**
-     * ✅ スムーズなblob描画
-     * - 点の中心を通るベジェ曲線で輪郭を描く
-     * - 輪郭をさらにスムージング
-     * - 塗りつぶす
+     * ✅ シンプルな塗りつぶし描画（二重楕円構造対応）
+     * - 外側楕円の質点を直線で結んで塗りつぶすのみ
      */
     renderSmoothBlob(liquidParticle) {
         const spheres = liquidParticle.spheres;
-        if (spheres.length < 2) return;
+        if (spheres.length < 3) return;
 
-        const center = spheres[0].position;
-        const outerSpheres = spheres.slice(1);
+        // 外側楕円の質点のみを抽出（sphereType が 'outer' のもの）
+        const outerSpheres = spheres.filter(s => s.sphereType === 'outer');
         if (outerSpheres.length < 3) return;
+
+        // 重心を計算
+        const centerX = outerSpheres.reduce((sum, s) => sum + s.position.x, 0) / outerSpheres.length;
+        const centerY = outerSpheres.reduce((sum, s) => sum + s.position.y, 0) / outerSpheres.length;
+        const center = { x: centerX, y: centerY };
 
         // 外周を角度順に並べ替え
         const sorted = this.sortOuterSpheresByAngle(outerSpheres, center);
 
-        // 点の中心を通る輪郭点を作成
-        const contourPoints = sorted.map(s => ({ x: s.x, y: s.y }));
-
-        // スムージングされたベジェ曲線パスを作成
-        const path = this.createSmoothBezierPath(contourPoints);
-
-        // 描画
-        this.drawBlobPath(path);
+        // 直線で質点をつなぎ、塗りつぶす
+        this.ctx.fillStyle = this.config.params.oilColor;
+        this.ctx.strokeStyle = this.config.params.oilColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(sorted[0].x, sorted[0].y);
+        for (let i = 1; i < sorted.length; i++) {
+            this.ctx.lineTo(sorted[i].x, sorted[i].y);
+        }
+        this.ctx.closePath();
+        // this.ctx.fill();
+        this.ctx.stroke();
     }
 
     sortOuterSpheresByAngle(outerSpheres, center) {

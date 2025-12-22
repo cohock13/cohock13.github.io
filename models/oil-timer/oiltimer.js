@@ -88,6 +88,7 @@ export class OilTimer {
         const gui = new window.lil.GUI({ title: 'オイルタイマー 設定' });
 
         // 基本コントロール
+        gui.add(this.config.params, 'simulationSpeed', 0.5, 3.0, 0.1).name('シミュレーション速度');
         gui.add(this.config.params, 'spawnInterval', 500, 3000, 100).name('オイル出現間隔 (ms)');
         gui.addColor(this.config.params, 'oilColor').name('色').onChange(() => {
             this.physicsUpdater.updateLiquidProperties(this.particleSpawner.getLiquidParticles());
@@ -148,7 +149,30 @@ export class OilTimer {
     animate() {
         this.physicsUpdater.update(this.particleSpawner.getLiquidParticles());
 
-        Matter.Engine.update(this.engine, 1000 / this.performanceMonitor.getFPS());
+        // シミュレーション速度に応じて物理演算を複数回実行
+        // deltaTimeは一定に保ち、更新回数で速度を調整
+        const baseDeltaTime = 1000 / 60; // 60FPSを基準とした固定deltaTime
+        const speed = this.config.params.simulationSpeed;
+
+        // 速度が1未満の場合は確率的に更新をスキップ
+        if (speed < 1.0) {
+            if (Math.random() < speed) {
+                Matter.Engine.update(this.engine, baseDeltaTime);
+            }
+        } else {
+            // 速度が1以上の場合は複数回更新
+            const updateCount = Math.floor(speed);
+            const fractionalPart = speed - updateCount;
+
+            for (let i = 0; i < updateCount; i++) {
+                Matter.Engine.update(this.engine, baseDeltaTime);
+            }
+
+            // 端数部分を確率的に処理
+            if (Math.random() < fractionalPart) {
+                Matter.Engine.update(this.engine, baseDeltaTime);
+            }
+        }
 
         // 一定間隔で新しいオイルパーティクルをスポーン
         this.particleSpawner.updateOilSpawning(this.world);
