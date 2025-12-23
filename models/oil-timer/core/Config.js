@@ -6,16 +6,16 @@ export class Config {
         // 物理パラメータ
         this.params = {
             gravity: 0.5,                // 重力の強さ
-            oilColor: '#ff6b35',         // レーンAのオイルの色
-            oilColorB: '#35a8ff',        // レーンBのオイルの色
+            oilColor: '#e63946',         // レーンAのオイルの色
+            oilColorB: '#88b04b',        // レーンBのオイルの色
             stepColorA: '#ababab',       // レーンAのステップ枠線の色
             stepColorB: '#474747',       // レーンBのステップ枠線の色
             backgroundColor: '#1a1a1a',  // 背景色（壁・ステップの塗りつぶし色）
-            spawnInterval: 1200,         // オイル出現間隔（ミリ秒）
+            spawnInterval: 900,         // オイル出現間隔（ミリ秒）
             containerWidth: 800,         // 固定幅のオイルタイマーコンテナ幅（ピクセル）
             spawnYOffset: -70,           // スポーン位置の垂直オフセット（階段の上）
             removalBufferY: 100,         // パーティクル削除の垂直バッファ（画面下）
-            simulationSpeed: 1.5         // シミュレーション速度（0.5～3.0の範囲）
+            simulationSpeed: 2.0         // シミュレーション速度（0.5～3.0の範囲）
         };
 
         // 液体パーティクルシステムのパラメータ（p5jsのソフトボディ物理学に基づく）
@@ -55,8 +55,8 @@ export class Config {
 
             // 内外接続のパラメータ
             radialConnection: {
-                stiffness: 0.2,          // 内外を繋ぐばねの硬さ
-                damping: 0.01            // 内外を繋ぐばねの減衰
+                stiffness: 0.20,          // 内外を繋ぐばねの硬さ
+                damping: 0.000            // 内外を繋ぐばねの減衰
             }
         };
 
