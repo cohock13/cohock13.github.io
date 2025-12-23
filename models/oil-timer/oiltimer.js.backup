@@ -1,0 +1,1148 @@
+/**
+ * Oil Timer Simulator
+ */
+export class OilTimer {
+    constructor() {
+        this.canvas = document.getElementById('canvas');
+
+        if (!this.canvas) {
+            throw new Error('Canvas element with id "canvas" not found');
+        }
+
+        // Create separate canvases for different layers
+        this.backgroundCanvas = document.createElement('canvas');
+        this.backgroundCtx = this.backgroundCanvas.getContext('2d');
+
+        this.oilCanvas = document.createElement('canvas');
+        this.oilCtx = this.oilCanvas.getContext('2d');
+
+        this.stairsCanvas = document.createElement('canvas');
+        this.stairsCtx = this.stairsCanvas.getContext('2d');
+
+        this.wallsCanvas = document.createElement('canvas');
+        this.wallsCtx = this.wallsCanvas.getContext('2d');
+
+        this.resizeCanvas();
+
+        // Setup canvas layering
+        this.setupCanvasLayers();
+
+        // Matter.js setup
+        this.engine = Matter.Engine.create();
+        this.world = this.engine.world;
+
+        // Use Matter.js built-in renderer for particles only on oil canvas
+        this.render = Matter.Render.create({
+            canvas: this.oilCanvas,
+            engine: this.engine,
+            options: {
+                width: this.oilCanvas.width,
+                height: this.oilCanvas.height,
+                wireframes: false,
+                background: 'transparent',
+                showAngleIndicator: false,
+                showVelocity: false,
+                showDebug: false,
+                showStaticBodies: true,
+            }
+        });
+
+        // Physics settings
+        this.engine.world.gravity.y = 1.0;
+        this.engine.world.gravity.x = 0;
+
+        // Simulation state
+        this.isFlipped = false;
+        this.liquidParticles = [];    // Array of liquid particle systems
+        this.staticBodies = [];
+
+        // Oil spawning state
+        this.lastSpawnTime = 0;
+        this.nextParticleIndex = 0;
+
+        // Performance tracking
+        this.frameCount = 0;
+        this.lastTime = performance.now();
+        this.fps = 60;
+
+        // Physics parameters
+        this.params = {
+            gravity: 1.0,
+            oilColor: '#ff6b35',
+            spawnInterval: 2000,     // Oil spawn interval in milliseconds
+            containerWidth: 800      // Fixed oil timer container width in pixels
+        };
+
+        // Liquid particle system parameters (based on p5js soft body physics)
+        this.liquidSystemParams = {
+            spheresPerParticle: 22,      // Number of spheres per liquid particle (1 center + 21 outer)
+            sphereRadius: 3,             // Radius of each sphere
+            outerSphereRadiusRatio: 0.85, // Ratio of outer sphere radius to center sphere radius
+            stiffness: 0.12,            // Spring stiffness (低いほど柔らかい)
+            damping: 0.05,              // Spring damping (高いと動きがぬるっと止まる)
+            outerDampingRatio: 0.8,     // Damping ratio for outer-to-outer springs
+            restitution: 0.8,           // Bounce factor for individual spheres
+            length: 20,                 // Spring natural length (少し短めにすると収縮力が働く)
+            friction: 0.005,
+            frictionAir: 0.018,
+            density: 0.01,
+            centerMass: 5.0,            // Center sphere mass multiplier
+            outerMass: 0.1,             // Outer spheres mass multiplier
+            constraintVisible: true,    // Show spring constraints
+            // Advanced liquid parameters
+            outerSpringStiffness: 0.40, // Stiffness between outer spheres
+            // Ellipse shape parameters
+            ellipseX: 1.00,             // Horizontal ellipse ratio
+            ellipseY: 1.00              // Vertical ellipse ratio
+        };
+
+        // Rendering constants
+        this.renderConstants = {
+            inflateBase: 4.0,           // Base inflation for blob rendering
+            wobbleAmplitude: 0.35,      // Wobble animation amplitude
+            wobbleSpeed: 2.0,           // Wobble animation speed
+            blurRadius: 3,              // Blur effect radius (px)
+            blurAlpha: 0.55,            // Blur layer alpha
+            clampStrengthMin: 0.18,     // Minimum clamp strength
+            clampStrengthMax: 0.60,     // Maximum clamp strength
+            clampStrengthBase: 0.55     // Base clamp strength
+        };
+
+        try {
+            this.init();
+            this.createWorld();
+            this.setupGUI();
+            this.animate();
+
+            // Expose to global scope for debugging
+            window.liquidOilTimer = this;
+        } catch (error) {
+            console.error('Failed to initialize OilTimer:', error);
+            throw error;
+        }
+    }
+
+    setupCanvasLayers() {
+        const parentElement = this.canvas.parentNode;
+
+        // Setup background canvas (z-index: 1)
+        this.backgroundCanvas.style.position = 'absolute';
+        this.backgroundCanvas.style.top = '0';
+        this.backgroundCanvas.style.left = '0';
+        this.backgroundCanvas.style.zIndex = '1';
+
+        // Setup oil canvas (z-index: 2)
+        this.oilCanvas.style.position = 'absolute';
+        this.oilCanvas.style.top = '0';
+        this.oilCanvas.style.left = '0';
+        this.oilCanvas.style.zIndex = '2';
+
+        // Setup stairs canvas (z-index: 3)
+        this.stairsCanvas.style.position = 'absolute';
+        this.stairsCanvas.style.top = '0';
+        this.stairsCanvas.style.left = '0';
+        this.stairsCanvas.style.zIndex = '3';
+
+        // Setup walls canvas (z-index: 4)
+        this.wallsCanvas.style.position = 'absolute';
+        this.wallsCanvas.style.top = '0';
+        this.wallsCanvas.style.left = '0';
+        this.wallsCanvas.style.zIndex = '4';
+
+        // Hide the original canvas as we'll use our custom layers
+        this.canvas.style.display = 'none';
+
+        // Insert all canvases in order
+        parentElement.insertBefore(this.backgroundCanvas, this.canvas);
+        parentElement.insertBefore(this.oilCanvas, this.canvas);
+        parentElement.insertBefore(this.stairsCanvas, this.canvas);
+        parentElement.insertBefore(this.wallsCanvas, this.canvas);
+    }
+
+    resizeCanvas() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Resize all canvases
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.backgroundCanvas.width = width;
+        this.backgroundCanvas.height = height;
+        this.oilCanvas.width = width;
+        this.oilCanvas.height = height;
+        this.stairsCanvas.width = width;
+        this.stairsCanvas.height = height;
+        this.wallsCanvas.width = width;
+        this.wallsCanvas.height = height;
+
+        if (this.render) {
+            this.render.canvas = this.oilCanvas;
+            this.render.canvas.width = width;
+            this.render.canvas.height = height;
+            this.render.options.width = width;
+            this.render.options.height = height;
+        }
+    }
+
+    init() {
+        if (!Matter || !Matter.Engine) {
+            throw new Error('Matter.js library not loaded');
+        }
+
+        // Setup Matter.js engine options
+        this.engine.world.gravity.scale = 0.0015;
+        this.engine.enableSleeping = false;
+        this.engine.positionIterations = 10;     // default 6
+        this.engine.velocityIterations = 6;      // default 4
+        this.engine.constraintIterations = 4;    // default 2
+
+        // Add mouse control
+        this.mouse = Matter.Mouse.create(this.oilCanvas);
+        this.mouseConstraint = Matter.MouseConstraint.create(this.engine, {
+            mouse: this.mouse,
+            constraint: {
+                stiffness: 0.2,
+                render: {
+                    visible: false
+                }
+            }
+        });
+
+        Matter.World.add(this.world, this.mouseConstraint);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
+            this.createWorld();
+        });
+    }
+
+    setupGUI() {
+        if (typeof window.lil === 'undefined') {
+            setTimeout(() => this.setupGUI(), 100);
+            return;
+        }
+
+        const gui = new window.lil.GUI({ title: 'オイルタイマー 設定' });
+
+        // Basic controls
+        gui.add(this.params, 'spawnInterval', 500, 3000, 100).name('オイル出現間隔 (ms)');
+        gui.addColor(this.params, 'oilColor').name('色').onChange(() => {
+            this.updateLiquidProperties();
+        });
+        gui.add(this.liquidSystemParams, 'constraintVisible').name('ばね表示').onChange(() => {
+            this.updateConstraintVisibility();
+        });
+
+        gui.add(this, 'reset').name('リセット');
+    }
+
+    createWorld() {
+        // Clear existing bodies
+        Matter.World.clear(this.world);
+        Matter.Engine.clear(this.engine);
+
+        // Re-add mouse constraint
+        Matter.World.add(this.world, this.mouseConstraint);
+
+        this.liquidParticles = [];
+        this.staticBodies = [];
+
+        // Create glass container structure
+        this.createGlassStructure();
+
+        // Create liquid oil particles
+        this.createLiquidParticles();
+
+        // Render structures on separate canvases
+        this.renderBackground();
+        this.renderStairs();
+        this.renderWalls();
+    }
+
+    separateStructuresForRendering() {
+        this.wallBodies = this.staticBodies.slice(0, 2); // First 2 bodies are main walls
+        this.stairBodies = this.staticBodies.slice(2);   // Rest are stairs
+    }
+
+    createGlassStructure() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        const thickness = 30;
+
+        // Container dimensions - responsive below 900px, fixed above
+        const containerWidth = width < 900 ? width * 0.92 : this.params.containerWidth;
+        const containerX = (width - containerWidth) / 2;
+
+        // Container boundaries (invisible) - only left and right walls
+        const boundaries = [
+            Matter.Bodies.rectangle(-thickness, height / 2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } }),
+            Matter.Bodies.rectangle(width + thickness, height / 2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } })
+        ];
+        Matter.World.add(this.world, boundaries);
+
+        const glassWalls = [];
+
+        // Main container walls - only left and right walls
+        glassWalls.push(
+            // Left wall
+            Matter.Bodies.rectangle(containerX - thickness / 2, height / 2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } }),
+            // Right wall
+            Matter.Bodies.rectangle(containerX + containerWidth + thickness / 2, height / 2, thickness, height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0, render: { visible: false } })
+        );
+
+        // Create stairs for testing liquid behavior - similar to original oil timer
+        this.createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height);
+
+        this.staticBodies = glassWalls;
+        Matter.World.add(this.world, glassWalls);
+
+        // Separate stairs and walls for rendering
+        this.separateStructuresForRendering();
+    }
+
+    createLiquidTestStairs(glassWalls, containerX, containerWidth, thickness, height) {
+        const plateCount = 10;
+        const baseStepWidth = 80; // 基本のstep幅
+        const stepHeight = 70; // 各ステップの縦の進み幅（≒最小マージン）
+        const availableWidth = containerWidth * 0.9; // 利用可能幅
+        const minSteps = 3; // 最小ステップ数（これ以下だと油が流れない）
+        const calculatedSteps = Math.floor(availableWidth / baseStepWidth);
+        const stepsPerPlate = Math.max(minSteps, calculatedSteps); // 最低3ステップを確保
+        // 実際のステップ幅（小さい画面では幅を調整）
+        const actualStepWidth = availableWidth / stepsPerPlate;
+        const topY = 80; // 一番上の階段の基準高さ（spawnY = 0 から少し下）
+        const margin = 30;
+
+        for (let i = 0; i < plateCount; i++) {
+            let baseY;
+
+            if (i === 0) {
+                // 最上段は固定（オイル出現地点近く）
+                baseY = topY;
+            } else {
+                // 各プレートに 150px の余白 + 階段高さの合計分だけ下にずらす
+                const previousStepHeight = stepsPerPlate * (stepHeight / 2);
+                baseY = topY + i * (previousStepHeight + margin);
+            }
+
+            const isLeftOriented = i % 2 === 0;
+
+            for (let j = 0; j < stepsPerPlate; j++) {
+                // First step (j=0) has 5x steeper angle to prevent oil from getting stuck
+                const baseAngle = 0.05;
+                const angleMultiplier = j === 0 ? 7.5 : 2;  // steeper for first step
+                const stepAngle = (isLeftOriented ? baseAngle : -baseAngle) * angleMultiplier;
+
+                // Calculate step position with responsive width
+                const stepX = isLeftOriented
+                    ? containerX + actualStepWidth * (j + 0.5)  // Pack from left
+                    : containerX + containerWidth - actualStepWidth * (j + 0.5); // Pack from right
+
+                const stepY = baseY + j * (stepHeight / 2);
+
+                // Wall-adjacent step (j=0) is longer to prevent oil from slipping through gaps
+                // It extends to the wall but doesn't go outside
+                let stepWidthIndividual;
+                let adjustedStepX = stepX;
+
+                if (j === 0) {
+                    // First step - extends to wall edge (but not outside)
+                    stepWidthIndividual = actualStepWidth * 1.4;
+                    // Shift position toward wall to make it reach the wall
+                    adjustedStepX = isLeftOriented
+                        ? stepX - actualStepWidth * 0.10
+                        : stepX + actualStepWidth * 0.10;
+                } else {
+                    // All other steps - normal size
+                    stepWidthIndividual = actualStepWidth;
+                }
+
+                const stepSurface = Matter.Bodies.rectangle(
+                    adjustedStepX,
+                    stepY,
+                    stepWidthIndividual,
+                    thickness * 0.6,
+                    {
+                        isStatic: true,
+                        angle: stepAngle,
+                        friction: 0,
+                        frictionStatic: 0,
+                        restitution: 0,
+                        chamfer: { radius: 6 },
+                        render: { visible: false }
+                    }
+                );
+
+                glassWalls.push(stepSurface);
+            }
+        }
+    }
+
+    createLiquidParticles() {
+        // Remove existing liquid particle systems
+        this.liquidParticles.forEach(liquidParticle => {
+            this.removeLiquidParticle(liquidParticle);
+        });
+
+        this.liquidParticles = [];
+        this.nextParticleIndex = 0;
+
+        // No initial particles - they will be spawned automatically
+    }
+
+    createLiquidParticle(centerX, centerY, index) {
+        const spheres = [];
+        const constraints = [];
+        const numSpheres = this.liquidSystemParams.spheresPerParticle;
+        const radius = this.liquidSystemParams.sphereRadius;
+
+        // --- 中心の質点 ---
+        const centerSphere = Matter.Bodies.circle(centerX, centerY, radius, {
+            restitution: this.liquidSystemParams.restitution,
+            friction: this.liquidSystemParams.friction,
+            frictionAir: this.liquidSystemParams.frictionAir,
+            density: this.liquidSystemParams.density * this.liquidSystemParams.centerMass,
+            collisionFilter: { group: -1 },
+            render: { fillStyle: this.params.oilColor, strokeStyle: 'transparent', lineWidth: 0 },
+            liquidIndex: index,
+            sphereType: 'center'
+        });
+        spheres.push(centerSphere);
+
+        const outerSpheres = [];
+        const outerCount = numSpheres - 1;
+        const angleStep = (2 * Math.PI) / outerCount;
+
+        // 楕円配置
+        const base = this.liquidSystemParams.length;
+        const rx = base * this.liquidSystemParams.ellipseX;
+        const ry = base * this.liquidSystemParams.ellipseY;
+
+        for (let i = 0; i < outerCount; i++) {
+            const angle = i * angleStep;
+            const x = centerX + Math.cos(angle) * rx;
+            const y = centerY + Math.sin(angle) * ry;
+            const outerSphere = Matter.Bodies.circle(x, y, radius * this.liquidSystemParams.outerSphereRadiusRatio, {
+                restitution: this.liquidSystemParams.restitution,
+                friction: this.liquidSystemParams.friction,
+                frictionAir: this.liquidSystemParams.frictionAir,
+                density: this.liquidSystemParams.density * this.liquidSystemParams.outerMass,
+                collisionFilter: { group: -1 },
+                render: { fillStyle: this.params.oilColor, strokeStyle: 'transparent', lineWidth: 0 },
+                liquidIndex: index,
+                sphereType: 'outer',
+                outerIndex: i
+            });
+            spheres.push(outerSphere);
+            outerSpheres.push(outerSphere);
+        }
+
+        // --- 距離計算ヘルパー ---
+        const dist = (a, b) => Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y);
+
+        // 1) 中心から外周の各点につなぐ
+        for (let i = 0; i < outerCount; i++) {
+            constraints.push(
+                Matter.Constraint.create({
+                    bodyA: centerSphere,
+                    bodyB: outerSpheres[i],
+                    length: dist(centerSphere, outerSpheres[i]),
+                    stiffness: this.liquidSystemParams.stiffness,
+                    damping: this.liquidSystemParams.damping,
+                    render: {
+                        visible: this.liquidSystemParams.constraintVisible,
+                        strokeStyle: '#ffffff',
+                        lineWidth: 1
+                    }
+                })
+            );
+        }
+
+        // 2) 外周の隣接点同士をつなぐ
+        for (let i = 0; i < outerCount; i++) {
+            const a = outerSpheres[i];
+            const b = outerSpheres[(i + 1) % outerCount];
+            constraints.push(
+                Matter.Constraint.create({
+                    bodyA: a,
+                    bodyB: b,
+                    length: dist(a, b),
+                    stiffness: this.liquidSystemParams.outerSpringStiffness,
+                    damping: this.liquidSystemParams.damping * this.liquidSystemParams.outerDampingRatio,
+                    render: {
+                        visible: this.liquidSystemParams.constraintVisible,
+                        strokeStyle: '#ffffff',
+                        lineWidth: 1
+                    }
+                })
+            );
+        }
+
+        return { index, spheres, constraints, centerSphere };
+    }
+
+    removeLiquidParticle(liquidParticle) {
+        if (liquidParticle.spheres.length > 0) {
+            Matter.World.remove(this.world, liquidParticle.spheres);
+        }
+        if (liquidParticle.constraints.length > 0) {
+            Matter.World.remove(this.world, liquidParticle.constraints);
+        }
+    }
+
+    updateLiquidProperties() {
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.spheres.forEach(sphere => {
+                sphere.restitution = this.liquidSystemParams.restitution;
+                sphere.friction = this.liquidSystemParams.friction;
+                sphere.frictionAir = this.liquidSystemParams.frictionAir;
+
+                // Update color
+                if (sphere.render) {
+                    sphere.render.fillStyle = this.params.oilColor;
+                }
+            });
+        });
+    }
+
+    updateConstraintVisibility() {
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.constraints.forEach(constraint => {
+                constraint.render.visible = this.liquidSystemParams.constraintVisible;
+            });
+        });
+    }
+
+    renderBackground() {
+        // Clear background canvas and add dark background
+        this.backgroundCtx.fillStyle = '#000000';
+        this.backgroundCtx.fillRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
+    }
+
+    renderStairs() {
+        // Clear stairs canvas
+        this.stairsCtx.clearRect(0, 0, this.stairsCanvas.width, this.stairsCanvas.height);
+
+        // Render stair bodies
+        if (this.stairBodies) {
+            this.stairBodies.forEach(body => {
+                this.renderGlassBody(this.stairsCtx, body, 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.4)');
+            });
+        }
+    }
+
+    renderWalls() {
+        // Clear walls canvas
+        this.wallsCtx.clearRect(0, 0, this.wallsCanvas.width, this.wallsCanvas.height);
+
+        // Render wall bodies - use opaque background to hide step edges
+        if (this.wallBodies) {
+            this.wallBodies.forEach(body => {
+                // First draw black background to hide steps
+                this.renderGlassBody(this.wallsCtx, body, '#000000', 'rgba(255, 255, 255, 0.6)');
+                // Then draw semi-transparent glass on top
+                this.renderGlassBody(this.wallsCtx, body, 'rgba(255, 255, 255, 0.1)', 'transparent');
+            });
+        }
+    }
+
+    renderGlassBody(ctx, body, fillStyle, strokeStyle) {
+        // Glass appearance
+        ctx.fillStyle = fillStyle;
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 2;
+
+        // Render based on body type
+        if (body.circleRadius) {
+            // Circle body (bumps)
+            ctx.beginPath();
+            ctx.arc(body.position.x, body.position.y, body.circleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            // Rectangle body (walls and plates)
+            const vertices = body.vertices;
+            if (vertices.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(vertices[0].x, vertices[0].y);
+                for (let i = 1; i < vertices.length; i++) {
+                    ctx.lineTo(vertices[i].x, vertices[i].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Add glass highlight
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+    }
+
+    updatePhysics() {
+        // Update gravity
+        this.engine.world.gravity.x = 0;
+        this.engine.world.gravity.y = this.isFlipped ? -this.params.gravity : this.params.gravity;
+
+        // Update all liquid particle properties
+        this.updateLiquidProperties();
+
+        // Apply subtle forces for liquid behavior enhancement
+        this.applyLiquidForces();
+    }
+
+    applyLiquidForces() {
+        // Apply additional forces to enhance liquid-like behavior
+        this.liquidParticles.forEach(liquidParticle => {
+            let totalMass = 0;
+            let comX = 0;
+            let comY = 0;
+
+            // Calculate center of mass using all spheres
+            for (const sphere of liquidParticle.spheres) {
+                totalMass += sphere.mass;
+                comX += sphere.position.x * sphere.mass;
+                comY += sphere.position.y * sphere.mass;
+            }
+
+            if (totalMass === 0) return;
+            comX /= totalMass;
+            comY /= totalMass;
+
+            // Currently no additional cohesion force is applied
+            // This can be enabled in the future if needed
+        });
+    }
+
+    reset() {
+        this.createWorld();
+    }
+
+    flip() {
+        this.isFlipped = !this.isFlipped;
+
+        // Add some impulse to all spheres when flipping for dramatic effect
+        this.liquidParticles.forEach(liquidParticle => {
+            liquidParticle.spheres.forEach(sphere => {
+                const impulse = {
+                    x: (Math.random() - 0.5) * 0.02,
+                    y: this.isFlipped ? -0.015 : 0.015
+                };
+                Matter.Body.applyForce(sphere, sphere.position, impulse);
+            });
+        });
+
+        // Update structure displays
+        this.renderStairs();
+        this.renderWalls();
+    }
+
+    spawnOilParticle() {
+        const width = this.canvas.width;
+        const containerWidth = width < 900 ? width * 0.92 : this.params.containerWidth;
+        const containerX = (width - containerWidth) / 2;
+
+        // Calculate first step position (matches createLiquidTestStairs logic)
+        const baseStepWidth = 80;
+        const availableWidth = containerWidth * 0.9;
+        const minSteps = 3;
+        const calculatedSteps = Math.floor(availableWidth / baseStepWidth);
+        const stepsPerPlate = Math.max(minSteps, calculatedSteps);
+        const actualStepWidth = availableWidth / stepsPerPlate;
+        const topY = 40;
+
+        // First plate (i=0) is left-oriented, first step (j=0)
+        const firstStepX = containerX + actualStepWidth * 0.5;
+
+        // Spawn position directly above the first left step
+        const spawnX = firstStepX;
+        const spawnY = topY - 30; // Slightly above the first step
+
+        const liquidParticle = this.createLiquidParticle(spawnX, spawnY, this.nextParticleIndex);
+        this.liquidParticles.push(liquidParticle);
+        this.nextParticleIndex++;
+
+        // Add to physics world
+        Matter.World.add(this.world, liquidParticle.spheres);
+        Matter.World.add(this.world, liquidParticle.constraints);
+    }
+
+    updateOilSpawning() {
+        const currentTime = performance.now();
+
+        if (currentTime - this.lastSpawnTime >= this.params.spawnInterval) {
+            this.spawnOilParticle();
+            this.lastSpawnTime = currentTime;
+        }
+    }
+
+    removeOffScreenParticles() {
+        const screenHeight = this.canvas.height;
+        const removalThreshold = screenHeight + 100; // Add some buffer to ensure complete removal
+
+        // Check each liquid particle system
+        this.liquidParticles = this.liquidParticles.filter(liquidParticle => {
+            const centerY = liquidParticle.centerSphere.position.y;
+
+            if (centerY > removalThreshold) {
+                // Remove this liquid particle system from the physics world
+                this.removeLiquidParticle(liquidParticle);
+                return false; // Remove from array
+            }
+
+            return true; // Keep in array
+        });
+    }
+
+    updateFPS() {
+        this.frameCount++;
+        const now = performance.now();
+        if (now - this.lastTime >= 1000) {
+            this.fps = Math.round((this.frameCount * 1000) / (now - this.lastTime));
+            this.frameCount = 0;
+            this.lastTime = now;
+
+            // Update UI
+            const fpsElement = document.getElementById('fps');
+            const particleCountElement = document.getElementById('particleCount');
+            const totalSpheres = this.liquidParticles.reduce((sum, mp) => sum + mp.spheres.length, 0);
+
+            if (fpsElement) fpsElement.textContent = this.fps;
+            if (particleCountElement) particleCountElement.textContent = `${this.liquidParticles.length} (${totalSpheres} spheres)`;
+        }
+    }
+
+    renderOilParticles() {
+        const ctx = this.oilCtx;
+
+        const productionMode = !this.liquidSystemParams.constraintVisible;
+
+        this.liquidParticles.forEach(liquidParticle => {
+            if (!productionMode) {
+                // Debug mode: Render constraints (springs) as simple white lines
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+
+                liquidParticle.constraints.forEach(constraint => {
+                    const posA = constraint.bodyA.position;
+                    const posB = constraint.bodyB.position;
+
+                    ctx.beginPath();
+                    ctx.moveTo(posA.x, posA.y);
+                    ctx.lineTo(posB.x, posB.y);
+                    ctx.stroke();
+                });
+
+                // Render spheres (particles) in debug mode
+                liquidParticle.spheres.forEach((sphere, index) => {
+                    const radius = index === 0
+                        ? this.liquidSystemParams.sphereRadius
+                        : this.liquidSystemParams.sphereRadius * this.liquidSystemParams.outerSphereRadiusRatio;
+
+                    ctx.fillStyle = this.params.oilColor;
+                    ctx.beginPath();
+                    ctx.arc(sphere.position.x, sphere.position.y, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            } else {
+                // Production mode: Render smooth blob
+                this.renderSmoothBlob(ctx, liquidParticle);
+            }
+        });
+
+        // ✅ Step への “めり込み” を描画だけで防止（production mode のみ）
+        // oilCanvas に描いた油を、階段形状で切り抜く（blur も含めて消える）
+        if (productionMode) {
+            this.applyStepMask(ctx);
+        }
+    }
+
+    /**
+     * ✅ 階段形状で油を “描画的に” 切り抜く
+     * globalCompositeOperation = 'destination-out'
+     * -> 既に描かれている油のピクセルを、階段領域で削除する
+     */
+    applyStepMask(ctx) {
+        if (!this.stairBodies || this.stairBodies.length === 0) return;
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+
+        for (const body of this.stairBodies) {
+            const verts = body.vertices;
+            if (!verts || verts.length < 3) continue;
+
+            ctx.beginPath();
+            ctx.moveTo(verts[0].x, verts[0].y);
+            for (let i = 1; i < verts.length; i++) {
+                ctx.lineTo(verts[i].x, verts[i].y);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * ✅ 崩れにくい "常に円っぽい" blob 描画
+     * - outer 6点を信用しすぎず、平均半径へ寄せる（半径クランプ）
+     * - ghost points を "円へ投影"して補完を強化（ひょうたん化を抑止）
+     * - tension を下げて局所コブを抑制
+     */
+    renderSmoothBlob(ctx, liquidParticle) {
+        const spheres = liquidParticle.spheres;
+        if (spheres.length < 2) return;
+
+        const center = spheres[0].position;
+        const outerSpheres = spheres.slice(1);
+        if (outerSpheres.length < 3) return;
+
+        // outerを角度順に
+        const sorted = this.sortOuterSpheresByAngle(outerSpheres, center);
+
+        // PCA楕円フレームを計算し、長軸/短軸を確定
+        const { uMajor, uMinor, a, b } = this.computeEllipseAxes(sorted, center);
+
+        // 焦点を計算
+        const { leftFocus, rightFocus } = this.computeFoci(center, uMajor, a, b);
+
+        // 輪郭点を作成
+        const loop = this.createContourLoop(sorted, center, uMajor, uMinor, a, b);
+
+        // 左右の弧に分割
+        const { negArc, posArc } = this.splitLoopByAxis(loop, center, uMajor);
+
+        // 焦点ベースのパスを作成
+        const path = this.createFocusBasedPath(leftFocus, rightFocus, negArc, posArc);
+
+        // 描画
+        this.drawBlobPath(ctx, path);
+    }
+
+    sortOuterSpheresByAngle(outerSpheres, center) {
+        return outerSpheres
+            .map(s => ({
+                x: s.position.x,
+                y: s.position.y,
+                angle: Math.atan2(s.position.y - center.y, s.position.x - center.x)
+            }))
+            .sort((a, b) => a.angle - b.angle);
+    }
+
+    computeEllipseAxes(sorted, center) {
+        // PCA楕円フレーム
+        const frame = this.computeEllipseFrameFromOuterPoints(sorted, center);
+
+        // 長軸/短軸を確定（ax>=ay にする）
+        let uMajor = frame.u1, uMinor = frame.u2;
+        let a = frame.ax, b = frame.ay;
+        if (b > a) {
+            // swap
+            uMajor = frame.u2; uMinor = frame.u1;
+            a = frame.ay; b = frame.ax;
+        }
+
+        // 見た目調整（inflate）
+        a += this.renderConstants.inflateBase;
+        b += this.renderConstants.inflateBase;
+
+        return { uMajor, uMinor, a, b };
+    }
+
+    computeFoci(center, uMajor, a, b) {
+        // 焦点距離 c = sqrt(a^2 - b^2)
+        const c = Math.sqrt(Math.max(0, a * a - b * b));
+
+        const leftFocus  = { x: center.x - uMajor.x * c, y: center.y - uMajor.y * c };
+        const rightFocus = { x: center.x + uMajor.x * c, y: center.y + uMajor.y * c };
+
+        return { leftFocus, rightFocus };
+    }
+
+    createContourLoop(sorted, center, uMajor, uMinor, a, b) {
+        const time = performance.now() * 0.001;
+
+        // つぶれが強いほどクランプ弱め、真円に近いほどクランプ強め
+        const anis = Math.abs(Math.log((a + 1e-6) / (b + 1e-6)));
+        let clampStrength = this.renderConstants.clampStrengthBase / (1 + anis * 2.0);
+        clampStrength = Math.max(this.renderConstants.clampStrengthMin, Math.min(this.renderConstants.clampStrengthMax, clampStrength));
+
+        // 半径を作ってローパスで尖りを殺す
+        const radii = this.calculateRadiiWithWobble(sorted, center, uMajor, uMinor, a, b, clampStrength, time);
+
+        // ローパス（レモン/ひょうたん対策）
+        const smoothedR = this.applyLowPassFilter(radii);
+
+        // 輪郭点（閉ループ）
+        return sorted.map((p, i) => {
+            const dx = p.x - center.x;
+            const dy = p.y - center.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const r = smoothedR[i];
+
+            return {
+                x: center.x + nx * r,
+                y: center.y + ny * r
+            };
+        });
+    }
+
+    calculateRadiiWithWobble(sorted, center, uMajor, uMinor, a, b, clampStrength, time) {
+        const radii = new Array(sorted.length);
+        for (let i = 0; i < sorted.length; i++) {
+            const p = sorted[i];
+            const dx = p.x - center.x;
+            const dy = p.y - center.y;
+            const dist = Math.hypot(dx, dy) || 1;
+
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // 楕円半径（長軸/短軸で明示）
+            const rEll = this.ellipseRadiusAlongDirectionMajorMinor(nx, ny, uMajor, uMinor, a, b);
+            const clamped = this.lerp(dist, rEll, clampStrength);
+
+            const wobble = Math.sin(time * this.renderConstants.wobbleSpeed + i * 0.7) * this.renderConstants.wobbleAmplitude;
+            radii[i] = clamped + wobble;
+        }
+        return radii;
+    }
+
+    applyLowPassFilter(radii) {
+        const smoothedR = new Array(radii.length);
+        for (let i = 0; i < radii.length; i++) {
+            const prev = radii[(i - 1 + radii.length) % radii.length];
+            const curr = radii[i];
+            const next = radii[(i + 1) % radii.length];
+            smoothedR[i] = 0.25 * prev + 0.50 * curr + 0.25 * next;
+        }
+        return smoothedR;
+    }
+
+    createFocusBasedPath(leftFocus, rightFocus, negArc, posArc) {
+        const path = new Path2D();
+
+        // 1) 左焦点→左弧
+        path.moveTo(leftFocus.x, leftFocus.y);
+        this.addSmoothChainQuadratic(path, negArc, /*moveToFirst*/ true);
+
+        // 2) 左弧終端→右焦点
+        path.lineTo(rightFocus.x, rightFocus.y);
+
+        // 3) 右焦点→右弧（逆回りで戻る：交差しないように）
+        const posArcRev = posArc.slice().reverse();
+        this.addSmoothChainQuadratic(path, posArcRev, /*moveToFirst*/ true);
+
+        // 4) 右弧終端→左焦点（焦点間を結んで閉じる）
+        path.lineTo(leftFocus.x, leftFocus.y);
+
+        return path;
+    }
+
+    drawBlobPath(ctx, path) {
+        // blur layer
+        ctx.save();
+        ctx.fillStyle = this.params.oilColor;
+        ctx.filter = `blur(${this.renderConstants.blurRadius}px)`;
+        ctx.globalAlpha = this.renderConstants.blurAlpha;
+        ctx.fill(path);
+        ctx.restore();
+
+        // solid layer
+        ctx.fillStyle = this.params.oilColor;
+        ctx.globalAlpha = 1.0;
+        ctx.fill(path);
+    }
+
+
+    // === Helper functions ===
+
+    ellipseRadiusAlongDirectionMajorMinor(nx, ny, uMajor, uMinor, a, b) {
+        const d1 = this.dot(nx, ny, uMajor.x, uMajor.y);
+        const d2 = this.dot(nx, ny, uMinor.x, uMinor.y);
+        const a2 = a * a;
+        const b2 = b * b;
+        const denom = Math.sqrt((d1 * d1) / a2 + (d2 * d2) / b2) || 1;
+        return 1 / denom;
+    }
+
+    splitLoopByAxis(loop, center, axis) {
+        const n = loop.length;
+        const s = new Array(n);
+
+        for (let i = 0; i < n; i++) {
+            const dx = loop[i].x - center.x;
+            const dy = loop[i].y - center.y;
+            s[i] = this.dot(dx, dy, axis.x, axis.y);
+        }
+
+        // sign change indices
+        const cuts = [];
+        for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            if ((s[i] >= 0 && s[j] < 0) || (s[i] < 0 && s[j] >= 0)) {
+                cuts.push(i);
+            }
+        }
+
+        // 予防：万一切れなければ半分で分ける
+        if (cuts.length < 2) {
+            const half = Math.floor(n / 2);
+            return { negArc: loop.slice(0, half), posArc: loop.slice(half) };
+        }
+
+        const c1 = cuts[0];
+        const c2 = cuts[1];
+
+        // c1->c2 が片側、残りがもう片側
+        const arc1 = [];
+        for (let k = 0; k <= (c2 - c1 + n) % n; k++) {
+            arc1.push(loop[(c1 + 1 + k) % n]);
+        }
+        const arc2 = [];
+        for (let k = 0; k <= (c1 - c2 + n) % n; k++) {
+            arc2.push(loop[(c2 + 1 + k) % n]);
+        }
+
+        // 平均符号で「左（neg）/右（pos）」を決める
+        const mean1 = arc1.reduce((acc, p) => acc + this.dot(p.x - center.x, p.y - center.y, axis.x, axis.y), 0) / arc1.length;
+        const mean2 = arc2.reduce((acc, p) => acc + this.dot(p.x - center.x, p.y - center.y, axis.x, axis.y), 0) / arc2.length;
+
+        if (mean1 < mean2) {
+            return { negArc: arc1, posArc: arc2 };
+        } else {
+            return { negArc: arc2, posArc: arc1 };
+        }
+    }
+
+    addSmoothChainQuadratic(path, pts, moveToFirst = true) {
+        if (!pts || pts.length === 0) return;
+
+        if (pts.length === 1) {
+            if (moveToFirst) path.lineTo(pts[0].x, pts[0].y);
+            return;
+        }
+
+        // start
+        if (moveToFirst) path.lineTo(pts[0].x, pts[0].y);
+
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[i];
+            const p1 = pts[i + 1];
+            const mx = (p0.x + p1.x) * 0.5;
+            const my = (p0.y + p1.y) * 0.5;
+            path.quadraticCurveTo(p0.x, p0.y, mx, my);
+        }
+
+        // last
+        const last = pts[pts.length - 1];
+        path.lineTo(last.x, last.y);
+    }
+
+    lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
+
+    dot(ax, ay, bx, by) {
+        return ax * bx + ay * by;
+    }
+
+    normalize(x, y) {
+        const d = Math.hypot(x, y) || 1;
+        return { x: x / d, y: y / d };
+    }
+
+    /**
+     * Outer points から PCA っぽく楕円フレームを作る
+     * - u1/u2: 主軸（直交）
+     * - ax/ay: その方向の半径（外周の最大投影から推定）
+     */
+    computeEllipseFrameFromOuterPoints(points, center) {
+        // covariance of vectors (p - center)
+        let sxx = 0, syy = 0, sxy = 0;
+        const n = points.length;
+
+        for (const p of points) {
+            const x = p.x - center.x;
+            const y = p.y - center.y;
+            sxx += x * x;
+            syy += y * y;
+            sxy += x * y;
+        }
+
+        sxx /= n;
+        syy /= n;
+        sxy /= n;
+
+        // eigen for 2x2 [sxx sxy; sxy syy]
+        const tr = sxx + syy;
+        const det = sxx * syy - sxy * sxy;
+        const disc = Math.sqrt(Math.max(0, (tr * tr) / 4 - det));
+        const l1 = tr / 2 + disc; // largest
+        // const l2 = tr / 2 - disc;
+
+        // eigenvector for l1
+        let vx, vy;
+        const eps = 1e-8;
+        if (Math.abs(sxy) > eps) {
+            vx = l1 - syy;
+            vy = sxy;
+        } else {
+            // already axis-aligned covariance
+            if (sxx >= syy) { vx = 1; vy = 0; }
+            else { vx = 0; vy = 1; }
+        }
+
+        const u1 = this.normalize(vx, vy);
+        const u2 = { x: -u1.y, y: u1.x };
+
+        // estimate radii by max projection (robust-ish)
+        let ax = 0, ay = 0;
+        for (const p of points) {
+            const x = p.x - center.x;
+            const y = p.y - center.y;
+            const a = Math.abs(this.dot(x, y, u1.x, u1.y));
+            const b = Math.abs(this.dot(x, y, u2.x, u2.y));
+            if (a > ax) ax = a;
+            if (b > ay) ay = b;
+        }
+
+        // guard against degenerate
+        ax = Math.max(ax, 1);
+        ay = Math.max(ay, 1);
+
+        return { u1, u2, ax, ay };
+    }
+
+    /**
+     * PCA 楕円（u1/u2, ax/ay）上で、方向 (nx,ny) における半径を返す
+     * ellipse: (x/ax)^2 + (y/ay)^2 = 1
+     * direction given in world coords; project into ellipse axes
+     */
+    animate() {
+        this.updatePhysics();
+
+        Matter.Engine.update(this.engine, 1000 / this.fps);
+
+        // Spawn new oil particles at intervals
+        this.updateOilSpawning();
+
+        // Remove oil particles that have fallen below the screen
+        this.removeOffScreenParticles();
+
+        // Clear oil canvas background
+        this.oilCtx.clearRect(0, 0, this.oilCanvas.width, this.oilCanvas.height);
+
+        // Custom render oil particles (includes step-mask in production mode)
+        this.renderOilParticles();
+
+        this.updateFPS();
+
+        requestAnimationFrame(() => this.animate());
+    }
+}
