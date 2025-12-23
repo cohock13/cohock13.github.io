@@ -39,7 +39,7 @@ export class Config {
             outerEllipse: {
                 mass: 0.03,               // 質点の質量倍率
                 adjacentStiffness: 0.10, // 隣接点間のばねの硬さ
-                adjacentDamping: 0.01,   // 隣接点間のばねの減衰
+                adjacentDamping: 0.00,   // 隣接点間のばねの減衰
                 adjacentDampingRatio: 0.3 // 隣接点間の減衰比率
             },
 
@@ -50,12 +50,12 @@ export class Config {
                 adjacentDamping: 0.01,   // 隣接点間のばねの減衰
                 adjacentDampingRatio: 0.0, // 隣接点間の減衰比率
                 diagonalStiffness: 0.042,  // 対角線のばねの硬さ
-                diagonalDamping: 0.01    // 対角線のばねの減衰
+                diagonalDamping: 0.00    // 対角線のばねの減衰
             },
 
             // 内外接続のパラメータ
             radialConnection: {
-                stiffness: 0.20,          // 内外を繋ぐばねの硬さ
+                stiffness: 0.18,          // 内外を繋ぐばねの硬さ
                 damping: 0.000            // 内外を繋ぐばねの減衰
             }
         };
